@@ -34,7 +34,7 @@ function Home() {
         }}
         className="w-full max-w-sm bg-yellow-400 text-green-900 font-bold text-lg py-4 rounded-2xl shadow-lg active:scale-95 transition-transform"
       >
-        🎮 Buat Sesi Baru
+        🏸 Buat Sesi Baru
       </button>
 
       {/* Tombol Gabung Sesi */}
@@ -75,6 +75,10 @@ function Home() {
       {/* Footer */}
       <p className="text-green-600 text-xs mt-16">
         Gak usah login der · Langsung generate permainan 🏸
+      </p>
+      <p className="text-green-600 text-xs mt-16 text-center">
+        app by andfrz <br/>
+        V1.0.0
       </p>
 
     </div>
