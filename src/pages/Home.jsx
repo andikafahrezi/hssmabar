@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import logo from '../assets/logo.svg'
+import useSessionStore from '../store/sessionStore'
 
 function Home() {
   const navigate = useNavigate()
   const [joinCode, setJoinCode] = useState('')
   const [showJoin, setShowJoin] = useState(false)
+  const { resetAll } = useSessionStore()
 
   return (
     <div className="min-h-screen bg-green-900 flex flex-col items-center justify-center px-6">
@@ -26,7 +28,10 @@ function Home() {
 
       {/* Tombol Buat Sesi */}
       <button
-        onClick={() => navigate('/setup')}
+        onClick={() => {
+            resetAll()
+            navigate('/setup')
+        }}
         className="w-full max-w-sm bg-yellow-400 text-green-900 font-bold text-lg py-4 rounded-2xl shadow-lg active:scale-95 transition-transform"
       >
         🎮 Buat Sesi Baru

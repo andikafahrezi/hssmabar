@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import TabBar from './TabBar'
+import logo from '../assets/logo.svg'
 
 function Header({ sessionFinished = false }) {
   const navigate = useNavigate()
@@ -12,9 +13,9 @@ function Header({ sessionFinished = false }) {
           onClick={() => navigate('/')}
           className="flex items-center gap-2"
         >
-          <span className="text-xl">🏸</span>
+          <img src={logo} alt="HSS Mabar" className="w-6 h-6" />
           <span className="text-white font-black text-lg tracking-tight">
-            Shuttle<span className="text-yellow-400">Mabar</span>
+            HSS<span className="text-yellow-400">Mabar</span>
           </span>
         </button>
       </div>
