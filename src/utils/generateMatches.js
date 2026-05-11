@@ -1,126 +1,274 @@
-/**
- * SHUTTLEMABAR - Match Generation v5 Final
- * 
- * Semua jumlah pemain (4-20+) otomatis di-handle
- * dengan membagi ke pool dan menggunakan tabel
- * yang sudah diverifikasi matematis
- */
+const BYE_PLAYER = { id: '__bye__', name: 'BYE' }
 
-// ── Helpers ──────────────────────────────────
-
-function rotateFair(players) {
-  const offset = Math.floor(Date.now() / 1000) % players.length
-  return [...players.slice(offset), ...players.slice(0, offset)]
+function isByePlayer(player) {
+  return player?.id === BYE_PLAYER.id
 }
 
-function interleaveGroups(table) {
-  const groups = new Map()
-  table.forEach(r => {
-    const key = [...r.sitting].sort().join(',')
-    if (!groups.has(key)) groups.set(key, [])
-    groups.get(key).push(r)
+function playerKey(player) {
+  return String(player.id)
+}
+
+function teamKey(team) {
+  return team.map(playerKey).sort().join('|')
+}
+
+function matchupKey(playerA, playerB) {
+  return [playerKey(playerA), playerKey(playerB)].sort().join('|')
+}
+
+function uniquePlayers(players) {
+  const seen = new Set()
+  return players.filter(player => {
+    const key = playerKey(player)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
   })
-  const groupArrays = [...groups.values()]
-  const maxLen = Math.max(...groupArrays.map(g => g.length))
-  const result = []
-  for (let i = 0; i < maxLen; i++) {
-    groupArrays.forEach(g => { if (i < g.length) result.push(g[i]) })
-  }
-  return result
 }
 
-// ── Tabel verified per ukuran pool ───────────
+function getRoundRobinRounds(items, byeItem = BYE_PLAYER) {
+  const list = [...items]
+  if (list.length % 2 !== 0) list.push(byeItem)
 
-const TABLES = {
-  4: [
-    { teamA:[0,1], teamB:[2,3], sitting:[] },
-    { teamA:[0,2], teamB:[1,3], sitting:[] },
-    { teamA:[0,3], teamB:[1,2], sitting:[] },
-  ],
-  5: [
-    { teamA:[0,1], teamB:[2,3], sitting:[4] },
-    { teamA:[0,2], teamB:[1,4], sitting:[3] },
-    { teamA:[0,3], teamB:[2,4], sitting:[1] },
-    { teamA:[0,4], teamB:[1,3], sitting:[2] },
-    { teamA:[1,2], teamB:[3,4], sitting:[0] },
-  ],
-  6: [
-    { teamA:[0,1], teamB:[2,3], sitting:[4,5] },
-    { teamA:[0,4], teamB:[1,5], sitting:[2,3] },
-    { teamA:[2,4], teamB:[3,5], sitting:[0,1] },
-    { teamA:[0,2], teamB:[1,3], sitting:[4,5] },
-    { teamA:[0,5], teamB:[1,4], sitting:[2,3] },
-    { teamA:[2,5], teamB:[3,4], sitting:[0,1] },
-    { teamA:[0,3], teamB:[1,2], sitting:[4,5] },
-    { teamA:[0,1], teamB:[4,5], sitting:[2,3] },
-    { teamA:[2,3], teamB:[4,5], sitting:[0,1] },
-  ],
-  7: [
-    { teamA:[0,1], teamB:[2,3], sitting:[4,5,6] },
-    { teamA:[0,4], teamB:[5,6], sitting:[1,2,3] },
-    { teamA:[1,5], teamB:[4,6], sitting:[0,2,3] },
-    { teamA:[0,2], teamB:[1,3], sitting:[4,5,6] },
-    { teamA:[2,6], teamB:[4,5], sitting:[0,1,3] },
-    { teamA:[3,4], teamB:[5,6], sitting:[0,1,2] },
-    { teamA:[0,3], teamB:[1,2], sitting:[4,5,6] },
-  ],
-  8: [
-    { teamA:[0,1], teamB:[2,3], sitting:[4,5,6,7] },
-    { teamA:[4,5], teamB:[6,7], sitting:[0,1,2,3] },
-    { teamA:[0,2], teamB:[1,3], sitting:[4,5,6,7] },
-    { teamA:[4,6], teamB:[5,7], sitting:[0,1,2,3] },
-    { teamA:[0,3], teamB:[1,2], sitting:[4,5,6,7] },
-    { teamA:[4,7], teamB:[5,6], sitting:[0,1,2,3] },
-    { teamA:[0,4], teamB:[1,5], sitting:[2,3,6,7] },
-    { teamA:[2,6], teamB:[3,7], sitting:[0,1,4,5] },
-    { teamA:[0,5], teamB:[1,4], sitting:[2,3,6,7] },
-    { teamA:[2,7], teamB:[3,6], sitting:[0,1,4,5] },
-    { teamA:[0,6], teamB:[1,7], sitting:[2,3,4,5] },
-    { teamA:[2,4], teamB:[3,5], sitting:[0,1,6,7] },
-    { teamA:[0,7], teamB:[1,6], sitting:[2,3,4,5] },
-    { teamA:[2,5], teamB:[3,4], sitting:[0,1,6,7] },
-  ],
-}
+  const total = list.length
+  const rounds = []
 
-// ── Generate pool sizes dari n pemain ────────
+  for (let round = 0; round < total - 1; round++) {
+    const pairs = []
 
-function splitIntoPools(n) {
-  const courts = Math.floor(n / 4)
-  if (courts === 0) return []
-  const base  = Math.floor(n / courts)
-  const extra = n % courts
-  const sizes = []
-  for (let c = 0; c < courts; c++) {
-    sizes.push(base + (c < extra ? 1 : 0))
-  }
-  return sizes
-}
-
-// ── Generate matches untuk satu pool ─────────
-
-function generatePoolMatches(pool, courtNum, targetRounds) {
-  const size  = pool.length
-  const table = interleaveGroups(TABLES[size] || TABLES[Math.min(size, 8)])
-
-  // Repeat tabel kalau targetRounds > panjang tabel
-  const extended = []
-  while (extended.length < targetRounds) {
-    for (const r of table) {
-      extended.push(r)
-      if (extended.length >= targetRounds) break
+    for (let i = 0; i < total / 2; i++) {
+      const left = list[i]
+      const right = list[total - 1 - i]
+      pairs.push(round % 2 === 0 ? [left, right] : [right, left])
     }
+
+    rounds.push(pairs)
+
+    const fixed = list[0]
+    const rotating = list.slice(1)
+    rotating.unshift(rotating.pop())
+    list.splice(0, total, fixed, ...rotating)
   }
 
-  return extended.map((r, i) => ({
-    round:     i + 1,
-    court:     courtNum,
-    teamA:     r.teamA.map(j => pool[j]),
-    teamB:     r.teamB.map(j => pool[j]),
-    sittingOut: r.sitting.map(j => pool[j]),
-  }))
+  return rounds
 }
 
-// ── AMERICANO ────────────────────────────────
+function createPlayerStats(players) {
+  return new Map(players.map(player => [
+    playerKey(player),
+    { played: 0, sat: 0 },
+  ]))
+}
+
+function addPlayed(stats, players) {
+  players.forEach(player => {
+    const stat = stats.get(playerKey(player))
+    if (stat) stat.played++
+  })
+}
+
+function addSat(stats, players) {
+  players.forEach(player => {
+    const stat = stats.get(playerKey(player))
+    if (stat) stat.sat++
+  })
+}
+
+function teamStat(stats, team, field) {
+  return team.reduce((total, player) => {
+    return total + (stats.get(playerKey(player))?.[field] || 0)
+  }, 0)
+}
+
+function hasSharedPlayer(teamA, teamB) {
+  const ids = new Set(teamA.map(playerKey))
+  return teamB.some(player => ids.has(playerKey(player)))
+}
+
+function opponentScore(teamA, teamB, opponentCounts) {
+  let score = 0
+
+  teamA.forEach(playerA => {
+    teamB.forEach(playerB => {
+      score += opponentCounts.get(matchupKey(playerA, playerB)) || 0
+    })
+  })
+
+  return score
+}
+
+function recordOpponents(teamA, teamB, opponentCounts) {
+  teamA.forEach(playerA => {
+    teamB.forEach(playerB => {
+      const key = matchupKey(playerA, playerB)
+      opponentCounts.set(key, (opponentCounts.get(key) || 0) + 1)
+    })
+  })
+}
+
+function sortTeamsForPlay(teams, stats) {
+  return [...teams].sort((teamA, teamB) => {
+    const satDiff = teamStat(stats, teamB, 'sat') - teamStat(stats, teamA, 'sat')
+    if (satDiff !== 0) return satDiff
+
+    const playDiff = teamStat(stats, teamA, 'played') - teamStat(stats, teamB, 'played')
+    if (playDiff !== 0) return playDiff
+
+    return teamKey(teamA).localeCompare(teamKey(teamB))
+  })
+}
+
+function findBestOpponent(teamA, teams, stats, opponentCounts) {
+  let bestIndex = -1
+  let bestScore = Infinity
+
+  teams.forEach((teamB, index) => {
+    if (hasSharedPlayer(teamA, teamB)) return
+
+    const repeatedOpponents = opponentScore(teamA, teamB, opponentCounts) * 100
+    const playBalance = teamStat(stats, teamB, 'played')
+    const score = repeatedOpponents + playBalance
+
+    if (score < bestScore) {
+      bestScore = score
+      bestIndex = index
+    }
+  })
+
+  return bestIndex
+}
+
+function makeMatch({ id, round, court, teamA, teamB, sittingOut }) {
+  return {
+    id,
+    round,
+    court,
+    teamA,
+    teamB,
+    scoreA: 0,
+    scoreB: 0,
+    status: 'pending',
+    sittingOut,
+  }
+}
+
+function activateFirstMatch(matches) {
+  if (matches.length > 0) matches[0].status = 'active'
+  return matches
+}
+
+function buildAmericanoMatches(players) {
+  const playerStats = createPlayerStats(players)
+  const opponentCounts = new Map()
+  const courtCount = Math.max(1, Math.floor(players.length / 4))
+  const partnerRounds = getRoundRobinRounds(players)
+
+  const pendingTeams = partnerRounds.flatMap(round => {
+    return round
+      .filter(([playerA, playerB]) => !isByePlayer(playerA) && !isByePlayer(playerB))
+      .map(([playerA, playerB]) => [playerA, playerB])
+  })
+
+  const originalTeams = [...pendingTeams]
+  const duplicateCount = new Map()
+  const matches = []
+  let matchId = 1
+
+  while (pendingTeams.length > 0) {
+    const orderedTeams = sortTeamsForPlay(pendingTeams, playerStats)
+    const teamA = orderedTeams[0]
+    const teamAIndex = pendingTeams.findIndex(team => teamKey(team) === teamKey(teamA))
+    pendingTeams.splice(teamAIndex, 1)
+
+    const opponentIndex = findBestOpponent(teamA, pendingTeams, playerStats, opponentCounts)
+    let teamB
+
+    if (opponentIndex >= 0) {
+      teamB = pendingTeams.splice(opponentIndex, 1)[0]
+    } else {
+      teamB = findDuplicateTeam(teamA, originalTeams, playerStats, opponentCounts, duplicateCount)
+      if (!teamB) break
+      duplicateCount.set(teamKey(teamB), (duplicateCount.get(teamKey(teamB)) || 0) + 1)
+    }
+
+    const playing = [...teamA, ...teamB]
+    const playingIds = new Set(playing.map(playerKey))
+    const sittingOut = players.filter(player => !playingIds.has(playerKey(player)))
+
+    matches.push(makeMatch({
+      id: matchId,
+      round: matchId,
+      court: ((matchId - 1) % courtCount) + 1,
+      teamA,
+      teamB,
+      sittingOut,
+    }))
+
+    addPlayed(playerStats, playing)
+    addSat(playerStats, sittingOut)
+    recordOpponents(teamA, teamB, opponentCounts)
+    matchId++
+  }
+
+  return matches
+}
+
+function findDuplicateTeam(teamA, teams, stats, opponentCounts, duplicateCount) {
+  const candidates = teams.filter(team => !hasSharedPlayer(teamA, team))
+  if (candidates.length === 0) return null
+
+  return candidates.sort((teamB, teamC) => {
+    const duplicateDiff = (duplicateCount.get(teamKey(teamB)) || 0) -
+      (duplicateCount.get(teamKey(teamC)) || 0)
+    if (duplicateDiff !== 0) return duplicateDiff
+
+    const opponentDiff = opponentScore(teamA, teamB, opponentCounts) -
+      opponentScore(teamA, teamC, opponentCounts)
+    if (opponentDiff !== 0) return opponentDiff
+
+    const playDiff = teamStat(stats, teamB, 'played') - teamStat(stats, teamC, 'played')
+    if (playDiff !== 0) return playDiff
+
+    return teamKey(teamB).localeCompare(teamKey(teamC))
+  })[0]
+}
+
+function buildRoundRobinEntityMatches(entities, entityToPlayers, allPlayers) {
+  const byeEntity = { id: '__bye_entity__', players: [BYE_PLAYER] }
+  const rounds = getRoundRobinRounds(entities, byeEntity)
+  const courtCount = Math.max(1, Math.floor(allPlayers.length / 4))
+  const matches = []
+  let matchId = 1
+
+  rounds.forEach((pairs, roundIndex) => {
+    const sittingOut = pairs.flatMap(([entityA, entityB]) => {
+      if (entityA === byeEntity) return entityToPlayers(entityB)
+      if (entityB === byeEntity) return entityToPlayers(entityA)
+      return []
+    })
+    let court = 1
+
+    pairs.forEach(([entityA, entityB]) => {
+      if (entityA === byeEntity || entityB === byeEntity) return
+
+      const teamA = entityToPlayers(entityA)
+      const teamB = entityToPlayers(entityB)
+
+      matches.push(makeMatch({
+        id: matchId++,
+        round: roundIndex + 1,
+        court,
+        teamA,
+        teamB,
+        sittingOut: uniquePlayers(sittingOut),
+      }))
+
+      court = court === courtCount ? 1 : court + 1
+    })
+  })
+
+  return matches
+}
 
 export function generateAmericano(players) {
   if (players.length < 4) {
@@ -128,149 +276,119 @@ export function generateAmericano(players) {
     return []
   }
 
-  const rotated  = rotateFair(players)
-  const n        = rotated.length
-  const sizes    = splitIntoPools(n)
-
-  // Bagi players ke pool
-  const pools = []
-  let idx = 0
-  sizes.forEach(size => {
-    pools.push(rotated.slice(idx, idx + size))
-    idx += size
-  })
-
-  // Tentukan targetRounds = max panjang tabel antar pool
-  const targetRounds = Math.max(
-    ...pools.map(pool => {
-      const t = TABLES[pool.length] || TABLES[Math.min(pool.length, 8)]
-      return (interleaveGroups(t)).length
-    })
-  )
-
-  // Generate matches per pool
-  const perPool = pools.map((pool, i) =>
-    generatePoolMatches(pool, i + 1, targetRounds)
-  )
-
-  // Flatten: semua court di ronde yang sama dijadikan satu list
-  const matches = []
-  let matchId = 1
-
-  for (let r = 0; r < targetRounds; r++) {
-    perPool.forEach(poolMatches => {
-      if (r < poolMatches.length) {
-        matches.push({
-          id: matchId++,
-          ...poolMatches[r],
-          scoreA: 0,
-          scoreB: 0,
-          status: 'pending',
-        })
-      }
-    })
-  }
-
-  if (matches.length > 0) matches[0].status = 'active'
-  return matches
-}
-
-// ── SINGLES ──────────────────────────────────
-
-function getRoundRobinRounds(players) {
-  const list = [...players]
-  if (list.length % 2 !== 0) list.push({ id: 'bye', name: 'BYE' })
-  const total  = list.length
-  const rounds = []
-
-  for (let r = 0; r < total - 1; r++) {
-    const pairs = []
-    for (let i = 0; i < total / 2; i++) {
-      pairs.push([list[i], list[total - 1 - i]])
-    }
-    rounds.push(pairs)
-    const fixed    = list[0]
-    const rotating = list.slice(1)
-    rotating.unshift(rotating.pop())
-    list.splice(0, total, fixed, ...rotating)
-  }
-  return rounds
+  return activateFirstMatch(buildAmericanoMatches(players))
 }
 
 export function generateSingles(players) {
-  const matches = []
-  let matchId   = 1
-  const rounds  = getRoundRobinRounds(players)
+  const matches = buildRoundRobinEntityMatches(
+    players,
+    player => [player],
+    players
+  )
 
-  rounds.forEach((pairs, roundIdx) => {
-    pairs.forEach(([p1, p2]) => {
-      if (p1.id === 'bye' || p2.id === 'bye') return
-      matches.push({
-        id: matchId++,
-        round: roundIdx + 1,
-        court: 1,
-        teamA: [p1],
-        teamB: [p2],
-        scoreA: 0,
-        scoreB: 0,
-        status: 'pending',
-        sittingOut: [],
-      })
+  return activateFirstMatch(matches)
+}
+
+export function generateMixed(players) {
+  const males = players.filter(player => player.gender === 'male')
+  const females = players.filter(player => player.gender === 'female')
+
+  if (males.length < 2 || females.length < 2) {
+    return []
+  }
+
+  const mixedTeams = []
+
+  males.forEach(male => {
+    females.forEach(female => {
+      mixedTeams.push([male, female])
     })
   })
 
-  if (matches.length > 0) matches[0].status = 'active'
+  return activateFirstMatch(scheduleMixedTeams(mixedTeams, players))
+}
+
+function scheduleMixedTeams(teams, players) {
+  const playerStats = createPlayerStats(players)
+  const opponentCounts = new Map()
+  const courtCount = Math.max(1, Math.floor(players.length / 4))
+  const pendingTeams = [...teams]
+  const originalTeams = [...teams]
+  const duplicateCount = new Map()
+  const matches = []
+  let matchId = 1
+
+  while (pendingTeams.length > 0) {
+    const orderedTeams = sortTeamsForPlay(pendingTeams, playerStats)
+    const teamA = orderedTeams[0]
+    const teamAIndex = pendingTeams.findIndex(team => teamKey(team) === teamKey(teamA))
+    pendingTeams.splice(teamAIndex, 1)
+
+    const opponentIndex = findBestOpponent(teamA, pendingTeams, playerStats, opponentCounts)
+    let teamB
+
+    if (opponentIndex >= 0) {
+      teamB = pendingTeams.splice(opponentIndex, 1)[0]
+    } else {
+      teamB = findDuplicateTeam(teamA, originalTeams, playerStats, opponentCounts, duplicateCount)
+      if (!teamB) break
+      duplicateCount.set(teamKey(teamB), (duplicateCount.get(teamKey(teamB)) || 0) + 1)
+    }
+
+    const playing = [...teamA, ...teamB]
+    const playingIds = new Set(playing.map(playerKey))
+    const sittingOut = players.filter(player => !playingIds.has(playerKey(player)))
+
+    matches.push(makeMatch({
+      id: matchId,
+      round: matchId,
+      court: ((matchId - 1) % courtCount) + 1,
+      teamA,
+      teamB,
+      sittingOut,
+    }))
+
+    addPlayed(playerStats, playing)
+    addSat(playerStats, sittingOut)
+    recordOpponents(teamA, teamB, opponentCounts)
+    matchId++
+  }
+
   return matches
 }
-
-// ── MIXED ─────────────────────────────────────
-
-export function generateMixed(players) {
-  // Untuk saat ini gunakan Singles
-  // (bisa dikembangkan dengan filter gender)
-  return generateSingles(players)
-}
-
-// ── FIXED DOUBLES ─────────────────────────────
 
 export function generateFixedDoubles(players) {
   const teams = []
-  for (let i = 0; i + 1 < players.length; i += 2) {
-    teams.push([players[i], players[i + 1]])
-  }
-  if (teams.length < 2) return []
+  const unmatchedPlayers = []
 
-  const matches = []
-  let matchId   = 1
-
-  for (let i = 0; i < teams.length - 1; i++) {
-    for (let j = i + 1; j < teams.length; j++) {
-      matches.push({
-        id: matchId++,
-        round: matchId - 1,
-        court: 1,
-        teamA: teams[i],
-        teamB: teams[j],
-        scoreA: 0,
-        scoreB: 0,
-        status: 'pending',
-        sittingOut: [],
-      })
+  for (let i = 0; i < players.length; i += 2) {
+    if (players[i + 1]) {
+      teams.push([players[i], players[i + 1]])
+    } else {
+      unmatchedPlayers.push(players[i])
     }
   }
 
-  if (matches.length > 0) matches[0].status = 'active'
-  return matches
-}
+  if (teams.length < 2) return []
 
-// ── Main export ───────────────────────────────
+  const matches = buildRoundRobinEntityMatches(
+    teams,
+    team => team,
+    players
+  ).map(match => ({
+    ...match,
+    sittingOut: uniquePlayers([...(match.sittingOut || []), ...unmatchedPlayers]),
+  }))
+
+  return activateFirstMatch(matches)
+}
 
 export function generateMatches(format, players) {
   switch (format) {
     case 'americano': return generateAmericano(players)
-    case 'singles':   return generateSingles(players)
-    case 'mixed':     return generateMixed(players)
-    case 'fixed':     return generateFixedDoubles(players)
-    default:          return generateSingles(players)
+    case 'singles': return generateSingles(players)
+    case 'mixed': return generateMixed(players)
+    case 'fixed': return generateFixedDoubles(players)
+    default: return generateSingles(players)
   }
 }

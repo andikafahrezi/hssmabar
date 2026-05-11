@@ -60,8 +60,19 @@ function Setup() {
     if (players.length < 2) return alert('Minimal 2 pemain!')
     if (format === 'americano' && players.length < 4)
       return alert('Format Americano butuh minimal 4 pemain!')
+    if (format === 'mixed') {
+      const maleCount = players.filter(p => p.gender === 'male').length
+      const femaleCount = players.filter(p => p.gender === 'female').length
+      if (maleCount < 2 || femaleCount < 2)
+        return alert('Format Mixed butuh minimal 2 pria dan 2 wanita!')
+    }
+    if (format === 'fixed' && players.length < 4)
+      return alert('Fixed Doubles butuh minimal 4 pemain!')
 
     const generated = generateMatches(format, players)
+    if (generated.length === 0)
+      return alert('Match belum bisa dibuat. Cek lagi jumlah pemain dan format permainan.')
+
     setMatches(generated)
     startSession()
     navigate('/game')

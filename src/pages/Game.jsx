@@ -8,6 +8,7 @@ function Game() {
   const [currentRound, setCurrentRound] = useState(0)
   const [scoreInputA, setScoreInputA]   = useState('')
   const [scoreInputB, setScoreInputB]   = useState('')
+  const [showFinishModal, setShowFinishModal] = useState(false)
 
   const {
     format, players, targetScore, sessionName,
@@ -65,10 +66,10 @@ function Game() {
   }
 
   function handleFinishSession() {
-    const ok = window.confirm(
-      'Akhiri sesi sekarang? Leaderboard akan dihitung dari match yang sudah selesai.'
-    )
-    if (!ok) return
+    setShowFinishModal(true)
+  }
+
+  function confirmFinishSession() {
     finishSession()
     navigate('/leaderboard')
   }
@@ -286,6 +287,57 @@ function Game() {
         )}
 
       </div>
+
+      {showFinishModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-green-950/70 px-5">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="finish-session-title"
+            className="w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-2xl"
+          >
+            <div className="bg-red-50 px-5 py-5 text-center">
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100 text-2xl">
+                🏁
+              </div>
+              <h3 id="finish-session-title" className="text-xl font-black text-green-900">
+                Akhiri sesi sekarang?
+              </h3>
+              <p className="mt-2 text-sm font-medium leading-6 text-gray-500">
+                Leaderboard akan dihitung dari match yang sudah selesai.
+              </p>
+            </div>
+
+            <div className="px-5 py-4">
+              <div className="grid grid-cols-2 gap-3 rounded-2xl bg-gray-50 p-3">
+                <div className="text-center">
+                  <p className="text-2xl font-black text-green-700">{doneCount}</p>
+                  <p className="text-xs font-bold text-gray-400">Done</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-black text-red-500">{pendingCount}</p>
+                  <p className="text-xs font-bold text-gray-400">Pending</p>
+                </div>
+              </div>
+
+              <div className="mt-5 flex gap-3">
+                <button
+                  onClick={() => setShowFinishModal(false)}
+                  className="flex-1 rounded-2xl border-2 border-gray-200 bg-white py-3 text-sm font-black text-gray-500 active:scale-95 transition-transform"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={confirmFinishSession}
+                  className="flex-1 rounded-2xl bg-red-500 py-3 text-sm font-black text-white shadow active:scale-95 transition-transform"
+                >
+                  Akhiri
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
