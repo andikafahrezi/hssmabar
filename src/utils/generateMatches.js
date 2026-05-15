@@ -271,10 +271,7 @@ function buildRoundRobinEntityMatches(entities, entityToPlayers, allPlayers) {
 }
 
 export function generateAmericano(players) {
-  if (players.length < 4) {
-    alert('Americano butuh minimal 4 pemain!')
-    return []
-  }
+  if (players.length < 4) return []
 
   return activateFirstMatch(buildAmericanoMatches(players))
 }

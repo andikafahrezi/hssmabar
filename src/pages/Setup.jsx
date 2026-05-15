@@ -1,18 +1,23 @@
 import {
   Check,
+  ShuffleAngular,
+  Info,
   GenderFemale,
   GenderMale,
   PencilSimpleLine,
+  PersonSimpleRunIcon,
   Plus,
-  ShuffleAngular,
-  TennisBall,
   User,
   Users,
   UsersFour,
   X,
 } from '@phosphor-icons/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import americanoIllustration from '../assets/illustrations/americano.svg'
+import fixedDoublesIllustration from '../assets/illustrations/fixed doubles.svg'
+import mixedDoublesIllustration from '../assets/illustrations/mixed doubles.svg'
+import singlesIllustration from '../assets/illustrations/singles.svg'
 import Header from '../components/Header'
 import useSessionStore from '../store/sessionStore'
 import { generateMatches } from '../utils/generateMatches'
@@ -23,28 +28,28 @@ const FORMATS = [
     label: 'Americano',
     desc: 'Partner berganti tiap ronde',
     icon: ShuffleAngular,
-    accent: 'bg-[#3f9f37] text-white border-none',
+    illustration: americanoIllustration,
   },
   {
     id: 'singles',
     label: 'Singles',
     desc: 'Satu vs Satu',
     icon: User,
-    accent: 'bg-[#3f9f37] text-white',
+    illustration: singlesIllustration,
   },
   {
     id: 'mixed',
     label: 'Mixed',
     desc: 'Pria + Wanita',
     icon: UsersFour,
-    accent: 'bg-[#3f9f37] text-white',
+    illustration: mixedDoublesIllustration,
   },
   {
     id: 'fixed',
     label: 'Fixed Doubles',
     desc: 'Tim Tetap',
     icon: Users,
-    accent: 'bg-[#3f9f37] text-white',
+    illustration: fixedDoublesIllustration,
   },
 ]
 
@@ -54,12 +59,20 @@ const TARGETS = [
   { score: 21, label: 'Pro' },
 ]
 
+const FORMAT_RULES = {
+  americano: { minPlayers: 4, emptyHint: 'Tambahkan minimal 4 pemain untuk format Americano.' },
+  singles: { minPlayers: 2, emptyHint: 'Tambahkan minimal 2 pemain untuk format Singles.' },
+  mixed: { minPlayers: 4, emptyHint: 'Tambahkan minimal 4 pemain untuk format Mixed.' },
+  fixed: { minPlayers: 4, emptyHint: 'Tambahkan minimal 4 pemain untuk format Fixed Doubles.' },
+}
+
 function Setup() {
   const navigate = useNavigate()
   const [nameInput, setNameInput] = useState('')
   const [gender, setGender] = useState('male')
   const [editingId, setEditingId] = useState(null)
   const [editingName, setEditingName] = useState('')
+  const [toastMessage, setToastMessage] = useState('')
 
   const {
     sessionName,
@@ -77,11 +90,45 @@ function Setup() {
     setMatches,
   } = useSessionStore()
 
+  useEffect(() => {
+    if (!toastMessage) return undefined
+
+    const timeoutId = window.setTimeout(() => {
+      setToastMessage('')
+    }, 2400)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [toastMessage])
+
+  function showToast(message) {
+    setToastMessage(message)
+  }
+
+  function validateBeforeStart() {
+    if (!format) return 'Pilih format permainan dulu.'
+
+    const selectedRule = FORMAT_RULES[format]
+    if (selectedRule && players.length < selectedRule.minPlayers) {
+      return selectedRule.emptyHint
+    }
+
+    if (format === 'mixed') {
+      const maleCount = players.filter((player) => player.gender === 'male').length
+      const femaleCount = players.filter((player) => player.gender === 'female').length
+
+      if (maleCount < 2 || femaleCount < 2) {
+        return 'Format Mixed butuh minimal 2 pria dan 2 wanita.'
+      }
+    }
+
+    return null
+  }
+
   function handleAddPlayer() {
     const name = nameInput.trim()
     if (!name) return
     if (players.find((player) => player.name.toLowerCase() === name.toLowerCase())) {
-      alert('Nama pemain sudah ada.')
+      showToast('Nama pemain sudah ada.')
       return
     }
 
@@ -98,7 +145,7 @@ function Setup() {
     const newName = editingName.trim()
     if (!newName) return
     if (players.find((player) => player.name.toLowerCase() === newName.toLowerCase() && player.id !== id)) {
-      alert('Nama sudah dipakai pemain lain.')
+      showToast('Nama sudah dipakai pemain lain.')
       return
     }
 
@@ -108,25 +155,12 @@ function Setup() {
   }
 
   function handleStart() {
-    if (!format) return alert('Pilih format permainan dulu.')
-    if (players.length < 2) return alert('Minimal 2 pemain.')
-    if (format === 'americano' && players.length < 4) {
-      return alert('Format Americano butuh minimal 4 pemain.')
-    }
-    if (format === 'mixed') {
-      const maleCount = players.filter((player) => player.gender === 'male').length
-      const femaleCount = players.filter((player) => player.gender === 'female').length
-      if (maleCount < 2 || femaleCount < 2) {
-        return alert('Format Mixed butuh minimal 2 pria dan 2 wanita.')
-      }
-    }
-    if (format === 'fixed' && players.length < 4) {
-      return alert('Fixed Doubles butuh minimal 4 pemain.')
-    }
+    const validationMessage = validateBeforeStart()
+    if (validationMessage) return showToast(validationMessage)
 
     const generated = generateMatches(format, players)
     if (generated.length === 0) {
-      return alert('Match belum bisa dibuat. Cek lagi jumlah pemain dan format permainan.')
+      return showToast('Match belum bisa dibuat. Cek lagi jumlah pemain dan format permainan.')
     }
 
     setMatches(generated)
@@ -137,6 +171,21 @@ function Setup() {
   return (
     <div className="app-screen flex flex-col">
       <Header sessionFinished={false} backTo="/" />
+      <div className={`pointer-events-none fixed left-1/2 top-4 z-50 w-[calc(100%-2rem)] max-w-[358px] -translate-x-1/2 transition-all duration-200 ${
+        toastMessage ? 'translate-y-0 opacity-100' : '-translate-y-3 opacity-0'
+      }`}>
+        <div className="rounded-[18px] border-[2px] border-[#1f4b26] bg-[linear-gradient(135deg,#c6ff10_0%,#f5ffd2_100%)] px-4 py-3 text-[#1f2d13] shadow-[3px_3px_0_rgba(31,75,38,0.98)]">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1f4b26] text-[#c6ff10]">
+              <Info size={16} weight="bold" />
+            </span>
+            <div>
+              <div className="font-display text-[0.98rem] uppercase leading-none">Setup Belum Siap</div>
+              <div className="mt-1 text-[0.8rem] font-semibold leading-5">{toastMessage}</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <main className="flex-1 px-5 pb-10">
         <div className="flex flex-col gap-6">
@@ -171,28 +220,36 @@ function Setup() {
                     key={item.id}
                     type="button"
                     onClick={() => setFormat(item.id)}
-                    className={`relative min-h-[92px] overflow-hidden rounded-[16px] border-2 p-3 text-left transition ${
+                    className={`relative min-h-[160px] overflow-hidden rounded-[16px] border-2 p-3 text-left transition ${
                       isActive
                         ? 'border-[#1f4b26] bg-[#3f9f37] text-white shadow-[2px_2px_0_rgba(31,75,38,0.98)]'
                         : 'border-[#1f4b26] bg-white text-[#1f4b26] shadow-[2px_2px_0_rgba(31,75,38,0.98)]'
                     }`}
                   >
+                    <img
+                      src={item.illustration}
+                      alt=""
+                      aria-hidden="true"
+                      className="pointer-events-none absolute bottom-0 left-0 w-full h-auto"
+                    />
                     <div
                       className={`absolute inset-0 opacity-25 ${
                         isActive ? 'bg-[linear-gradient(120deg,rgba(255,255,255,0.08),transparent_55%)]' : ''
                       }`}
                     />
-                    <div className="absolute inset-x-0 bottom-0 top-8 opacity-20">
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_right,rgba(63,159,55,0.22),transparent_45%),linear-gradient(90deg,transparent_0%,rgba(63,159,55,0.1)_45%,transparent_100%)]" />
-                      <div className="absolute bottom-3 left-5 h-8 w-20 rounded-full border border-current/35" />
-                      <div className="absolute bottom-5 right-4 h-10 w-24 rounded-full border border-current/25" />
-                    </div>
-                    <div className="relative flex h-full flex-col gap-3">
-                      <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full ${item.accent}`}>
-                        <Icon size={16} weight={isActive ? 'bold' : 'bold'} />
-                      </span>
-                      <div>
-                        <div className="font-display text-[1.2rem] font-semibold leading-none">{item.label}</div>
+                    <div className={`absolute inset-x-0 bottom-0 h-20 ${
+                      isActive
+                        ? 'bg-[linear-gradient(180deg,rgba(63,159,55,0)_0%,rgba(31,75,38,0.18)_100%)]'
+                        : 'bg-[linear-gradient(180deg,rgba(255,255,255,0)_0%,rgba(255,255,255,0.9)_100%)]'
+                    }`} />
+                    <div className="relative z-10 flex h-full flex-col justify-between">
+                      <div className="max-w-[88%]">
+                        <span className={`mb-3 inline-flex h-8 w-8 items-center justify-center rounded-full ${
+                          isActive ? 'bg-white/16 text-white' : 'bg-[#edf4e7] text-[#1f4b26]'
+                        }`}>
+                          <Icon size={16} weight="bold" />
+                        </span>
+                        <div className="font-display text-[1.3rem] font-semibold leading-none">{item.label}</div>
                         <div className={`mt-1 text-[0.72rem] leading-tight ${isActive ? 'text-white/82' : 'text-[#4d614d]'}`}>
                           {item.desc}
                         </div>
@@ -221,7 +278,7 @@ function Setup() {
                         : 'border-[#1f4b26] bg-white text-[#1f4b26] shadow-[2px_2px_0_rgba(31,75,38,0.98)]'
                     }`}
                   >
-                    <div className="font-display text-[1.7rem] leading-none">{item.score}</div>
+                    <div className="font-display text-[1.3rem] leading-none">{item.score}</div>
                     <div className={`mt-1 text-[0.72rem] ${isActive ? 'text-white/88' : 'text-[#587158]'}`}>
                       {item.label}
                     </div>
@@ -288,7 +345,7 @@ function Setup() {
             <div className="mt-3 flex flex-col gap-2.5">
               {players.length === 0 ? (
                 <div className="app-soft-card px-4 py-5 text-center text-[0.82rem] text-[#6d7c6d]">
-                  Tambahkan minimal {format === 'americano' || format === 'fixed' ? 4 : 2} pemain untuk mulai.
+                  {format ? FORMAT_RULES[format].emptyHint : 'Pilih format dulu, lalu tambahkan pemain untuk mulai.'}
                 </div>
               ) : null}
 
@@ -380,7 +437,7 @@ function Setup() {
           ) : (
             <button type="button" onClick={handleStart} className="app-primary-button flex items-center justify-center gap-2">
               <span>Mulai Main</span>
-              <TennisBall size={18} weight="fill" />
+              <PersonSimpleRunIcon size={18} weight="bold" />
             </button>
           )}
         </div>

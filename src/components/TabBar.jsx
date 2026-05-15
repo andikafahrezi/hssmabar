@@ -46,7 +46,7 @@ function TabBar({ sessionFinished = false }) {
                   ? <RankingIcon size={16} weight="regular" />
                   : tab.icon}
               </span>
-              <span className="font-display text-[0.82rem] leading-none">{tab.label}</span>
+              <span className="font-display text-[1rem] leading-none">{tab.label}</span>
             </button>
           )
         })}
