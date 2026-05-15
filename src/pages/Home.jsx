@@ -1,6 +1,7 @@
+import { PlusCircle, SignIn } from '@phosphor-icons/react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import logo from '../assets/logo.svg'
+import logo from '../assets/logohssmabar-vertical.svg'
 import useSessionStore from '../store/sessionStore'
 
 function Home() {
@@ -10,77 +11,74 @@ function Home() {
   const { resetAll } = useSessionStore()
 
   return (
-    <div className="min-h-screen bg-green-900 flex flex-col items-center justify-center px-6">
+    <div className="app-screen flex min-h-screen flex-col justify-between px-6 py-10">
+      <div className="pt-8">
+        <div className="mx-auto mb-10 flex max-w-[240px] flex-col items-center text-center">
+          <img src={logo} alt="HSS Mabar" className="mb-5 h-auto w-[190px]" />
+          <p className="mt-3 text-[0.88rem] leading-6 text-[#6d7c6d]">
+            Ora Usah Ca Ci Cu Langsung Aja di Gaskan !!!.
+          </p>
+        </div>
 
-      {/* Logo & Judul */}
-      <div className="text-center mb-12">
-        <img src={logo} alt="HSS Mabar" className="w-24 h-24 mx-auto mb-4" />
-        <h1 className="text-5xl font-black text-white tracking-tight">
-          HSS
-        </h1>
-        <h1 className="text-5xl font-black text-yellow-400 tracking-tight">
-          Mabar
-        </h1>
-        <p className="text-green-300 mt-3 text-sm">
-          Ora usah CaCiCu langsung aja di gaskeun!
-        </p>
-      </div>
-
-      {/* Tombol Buat Sesi */}
-      <button
-        onClick={() => {
-            resetAll()
-            navigate('/setup')
-        }}
-        className="w-full max-w-sm bg-yellow-400 text-green-900 font-bold text-lg py-4 rounded-2xl shadow-lg active:scale-95 transition-transform"
-      >
-        🏸 Buat Sesi Baru
-      </button>
-
-      {/* Tombol Gabung Sesi */}
-      <div className="w-full max-w-sm mt-4">
-        {!showJoin ? (
+        <div className="flex flex-col gap-3 ">
           <button
-            onClick={() => setShowJoin(true)}
-            className="w-full border-2 border-green-400 text-green-300 font-bold text-lg py-4 rounded-2xl active:scale-95 transition-transform"
+            type="button"
+            onClick={() => {
+              resetAll()
+              navigate('/setup')
+            }}
+            className="app-primary-button flex items-center justify-center gap-2 "
           >
-            🔗 Gabung Sesi
+            <PlusCircle size={20} weight="fill" />
+            <span>Buat Sesi Baru</span>
           </button>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <input
-              type="text"
-              placeholder="Masukkan kode sesi..."
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-              className="w-full bg-green-800 text-white placeholder-green-500 border-2 border-green-400 rounded-2xl px-5 py-4 text-lg font-bold tracking-widest outline-none"
-              maxLength={6}
-            />
+
+          {!showJoin ? (
             <button
-              onClick={() => alert(`Gabung dengan kode: ${joinCode}`)}
-              className="w-full bg-green-400 text-green-900 font-bold text-lg py-4 rounded-2xl active:scale-95 transition-transform"
+              type="button"
+              onClick={() => setShowJoin(true)}
+              className="flex min-h-16 items-center justify-center gap-2 rounded-[18px] border-2 border-[#1f4b26] bg-white px-4 font-display text-[1.1rem] uppercase leading-none text-[#1f4b26] shadow-[2px_2px_0_rgba(31,75,38,0.92)] transition active:translate-y-px"
             >
-              Masuk →
+              <SignIn size={18} weight="bold" />
+              Gabung Sesi
             </button>
-            <button
-              onClick={() => setShowJoin(false)}
-              className="text-green-500 text-sm text-center"
-            >
-              Batal
-            </button>
-          </div>
-        )}
+          ) : (
+            <div className="app-soft-card p-3">
+              <label htmlFor="join-code" className="app-field-label !mb-2">Kode Sesi</label>
+              <input
+                id="join-code"
+                type="text"
+                value={joinCode}
+                onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
+                placeholder="Masukkan kode sesi"
+                maxLength={6}
+                className="app-input mb-3 text-center text-[1.1rem] font-semibold tracking-[0.35em]"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => alert(`Gabung dengan kode: ${joinCode}`)}
+                  className="rounded-[14px] border-[1.5px] border-[#7da800] bg-[#c6ff10] px-3 py-3 font-semibold text-[#1f2d13]"
+                >
+                  Masuk
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowJoin(false)}
+                  className="rounded-[14px] border-[1.5px] border-[#9ad092] bg-white px-3 py-3 font-semibold text-[#1f4b26]"
+                >
+                  Batal
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Footer */}
-      <p className="text-green-600 text-xs mt-16">
-        Gak usah login der · Langsung generate permainan 🏸
-      </p>
-      <p className="text-green-600 text-xs mt-16 text-center">
-        app by andfrz <br/>
-        V1.0.0
-      </p>
-
+      <div className="pb-3 text-center text-[0.76rem] leading-6 text-[#7d8a7d]">
+        <div>Tanpa login der, langsung aje buat format main.</div>
+        <div className="mt-2">app by andfrz · v1.0.0</div>
+      </div>
     </div>
   )
 }

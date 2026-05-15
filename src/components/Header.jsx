@@ -1,28 +1,34 @@
+import { CaretLeft } from '@phosphor-icons/react'
 import { useNavigate } from 'react-router-dom'
 import TabBar from './TabBar'
-import logo from '../assets/logo.svg'
+import logo from '../assets/logohssmabar.svg'
 
-function Header({ sessionFinished = false }) {
+function Header({ sessionFinished = false, backTo = '/', showTabs = true }) {
   const navigate = useNavigate()
 
   return (
-    <div className="bg-green-900 px-5 pt-12 pb-0">
-      {/* Logo */}
-      <div className="flex items-center justify-between mb-4 px-1">
+    <header className="px-5 pb-3 pt-12">
+      <div className="relative mb-5 flex items-center justify-center">
         <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2"
+          type="button"
+          aria-label="Kembali"
+          onClick={() => navigate(backTo)}
+          className="absolute left-0 flex h-9 w-9 items-center justify-center rounded-full text-[#324232] transition hover:bg-[#edf4e7]"
         >
-          <img src={logo} alt="HSS Mabar" className="w-6 h-6" />
-          <span className="text-white font-black text-lg tracking-tight">
-            HSS<span className="text-yellow-400">Mabar</span>
-          </span>
+          <CaretLeft size={18} weight="bold" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="flex items-center justify-center"
+        >
+          <img src={logo} alt="HSS Mabar" className="h-6 w-auto" />
         </button>
       </div>
 
-      {/* Tab bar */}
-      <TabBar sessionFinished={sessionFinished} />
-    </div>
+      {showTabs ? <TabBar sessionFinished={sessionFinished} /> : null}
+    </header>
   )
 }
 
