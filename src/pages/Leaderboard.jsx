@@ -7,6 +7,8 @@ import {
   Target,
   UsersThree,
 } from '@phosphor-icons/react'
+import { useEffect, useRef } from 'react'
+import confetti from 'canvas-confetti'
 import { useNavigate } from 'react-router-dom'
 import firstPlaceMedal from '../assets/icons/1st-place-medal.svg'
 import secondPlaceMedal from '../assets/icons/2nd-place-medal.svg'
@@ -129,6 +131,50 @@ function Leaderboard() {
   } = useSessionStore()
 
   const standings = calculateStandings(players, matches)
+  const hasThreeStandings = standings.length >= 3
+
+  useEffect(() => {
+    if (!hasThreeStandings) return
+
+    // Tembak confetti dari kiri dan kanan sekaligus
+    const duration = 1500
+    const end = Date.now() + duration
+
+    const colors = ['#c6ff10', '#3f9f37', '#1f4b26', '#ffffff', '#f5c518']
+
+    function frame() {
+      // Kiri
+      confetti({
+        particleCount: 4,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0, y: 0.75 },
+        colors,
+        zIndex: 9999,
+      })
+
+      // Kanan
+      confetti({
+        particleCount: 4,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1, y: 0.75 },
+        colors,
+        zIndex: 9999,
+      })
+
+      if (Date.now() < end) {
+        requestAnimationFrame(frame)
+      }
+    }
+
+    // Delay sedikit supaya halaman sudah render dulu
+    const timer = setTimeout(() => {
+      frame()
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [hasThreeStandings])
   const doneMatches = matches.filter((match) => match.status === 'done').length
   const totalMatches = matches.length
   const progressWidth = totalMatches > 0 ? `${(doneMatches / totalMatches) * 100}%` : '0%'
