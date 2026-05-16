@@ -108,6 +108,7 @@ img {
   margin-bottom: 0.7rem;
   color: var(--primary-deep);
   font-family: 'Oswald', sans-serif;
+  text-transform: uppercase;
   font-weight: 500;
   font-size: 1rem;
   line-height: 1;
@@ -153,9 +154,9 @@ img {
   border-radius: 18px;
   background: var(--accent);
   color: var(--primary-deep);
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Oswald', sans-serif;
   font-size: 1.15rem;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1;
   letter-spacing: 0.01em;
   box-shadow: 2px 2px 0 rgba(31, 75, 38, 0.95);

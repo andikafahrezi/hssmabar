@@ -23,7 +23,7 @@ function TabBar({ sessionFinished = false }) {
   }
 
   return (
-    <div className="rounded-[24px] border-1 border-[#1f4b26] bg-[#3f9f37] p-[5px] shadow-[2px_2px_0_rgba(31,75,38,0.98)]">
+    <div className="rounded-[24px] border-[2px] border-[#1f4b26] bg-[#3f9f37] p-[5px] shadow-[2px_2px_0_#1f4b26]">
       <div className="grid grid-cols-3 gap-1">
         {tabs.map((tab) => {
           const isActive = current === tab.path

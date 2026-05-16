@@ -1,68 +1,157 @@
-import { useState, useEffect } from 'react'
+import {
+  ArrowClockwise,
+  Check,
+  ClockCountdown,
+  Info,
+  CaretLeft,
+  CaretRight,
+  FlagCheckered,
+  StrategyIcon,
+} from '@phosphor-icons/react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import trophyIcon from '../assets/icons/trophy.svg'
 import Header from '../components/Header'
 import useSessionStore from '../store/sessionStore'
 
 function Game() {
   const navigate = useNavigate()
   const [currentRound, setCurrentRound] = useState(0)
-  const [scoreInputA, setScoreInputA]   = useState('')
-  const [scoreInputB, setScoreInputB]   = useState('')
   const [showFinishModal, setShowFinishModal] = useState(false)
+  const [scorePickerTarget, setScorePickerTarget] = useState(null)
+  const [toastMessage, setToastMessage] = useState('')
 
   const {
-    format, players, targetScore, sessionName,
-    matches, setMatches,
-    sessionFinished, finishSession,
+    format,
+    players,
+    targetScore,
+    sessionName,
+    matches,
+    setMatches,
+    sessionFinished,
+    finishSession,
   } = useSessionStore()
 
+  function getInitialScore(matchScore) {
+    return matchScore > 0 ? String(matchScore) : ''
+  }
+
+  const [scoreInputA, setScoreInputA] = useState(getInitialScore(matches[0]?.scoreA))
+  const [scoreInputB, setScoreInputB] = useState(getInitialScore(matches[0]?.scoreB))
+
   useEffect(() => {
-    if (!format || players.length === 0) navigate('/setup')
-  }, [])
+    if (!format || players.length === 0) {
+      navigate('/setup')
+    }
+  }, [format, navigate, players.length])
+
+  useEffect(() => {
+    if (!toastMessage) return undefined
+
+    const timeoutId = window.setTimeout(() => {
+      setToastMessage('')
+    }, 2400)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [toastMessage])
+
+  function showToast(message) {
+    setToastMessage(message)
+  }
+
+  function goToRound(nextRound) {
+    if (nextRound < 0 || nextRound >= matches.length) return
+
+    const nextMatch = matches[nextRound]
+    setScoreInputA(getInitialScore(nextMatch?.scoreA))
+    setScoreInputB(getInitialScore(nextMatch?.scoreB))
+    setCurrentRound(nextRound)
+  }
 
   if (!format || matches.length === 0) {
     return (
-      <div className="min-h-screen bg-green-900 flex items-center justify-center">
-        <p className="text-white text-lg">Memuat sesi...</p>
+      <div className="app-screen flex min-h-screen items-center justify-center px-5">
+        <div className="app-soft-card w-full px-5 py-6 text-center">
+          <p className="font-display text-[1.2rem] uppercase text-[#1f4b26]">Memuat sesi...</p>
+          <p className="mt-2 text-[0.82rem] text-[#6d7c6d]">Menyiapkan match dan pemain.</p>
+        </div>
       </div>
     )
   }
 
-  const match   = matches[currentRound]
-  const isLast  = currentRound === matches.length - 1
-  const doneCount    = matches.filter(m => m.status === 'done').length
-  const pendingCount = matches.filter(m => m.status === 'pending').length
+  const match = matches[currentRound]
+  const isLast = currentRound === matches.length - 1
+  const doneCount = matches.filter((item) => item.status === 'done').length
+  const pendingCount = matches.filter((item) => item.status === 'pending').length
+  const activeCount = matches.filter((item) => item.status === 'active').length
+  const currentStatusLabel = match.status === 'done' ? 'Selesai' : 'Berlangsung'
+  const currentStatusClass = match.status === 'done'
+    ? 'bg-[#c6ff10] text-[#1f2d13]'
+    : 'bg-[#1f4b26] text-white'
+  const scoreOptions = Array.from({ length: 51 }, (_, index) => index)
+
+  function getFormatLabel(value) {
+    switch (value) {
+      case 'americano': return 'Americano'
+      case 'singles': return 'Singles'
+      case 'mixed': return 'Mixed'
+      case 'fixed': return 'Fixed Doubles'
+      default: return 'Match'
+    }
+  }
+
+  function openScorePicker(team) {
+    setScorePickerTarget(team)
+  }
+
+  function closeScorePicker() {
+    setScorePickerTarget(null)
+  }
+
+  function handleScorePick(score) {
+    if (scorePickerTarget === 'A') setScoreInputA(String(score))
+    if (scorePickerTarget === 'B') setScoreInputB(String(score))
+    closeScorePicker()
+  }
 
   function handleSubmit() {
-    const sA = parseInt(scoreInputA)
-    const sB = parseInt(scoreInputB)
-    if (isNaN(sA) || isNaN(sB)) return alert('Masukkan skor untuk kedua tim!')
-    if (sA < 0 || sB < 0)       return alert('Skor tidak boleh minus!')
+    const scoreA = Number.parseInt(scoreInputA, 10)
+    const scoreB = Number.parseInt(scoreInputB, 10)
 
-    const updated = matches.map((m, i) =>
-      i === currentRound
-        ? { ...m, scoreA: sA, scoreB: sB, status: 'done' }
-        : i === currentRound + 1
-        ? { ...m, status: 'active' }
-        : m
-    )
-    setMatches(updated)
-    setScoreInputA('')
-    setScoreInputB('')
+    if (Number.isNaN(scoreA) || Number.isNaN(scoreB)) {
+      return showToast('Masukkan skor untuk kedua tim dulu.')
+    }
+    if (scoreA < 0 || scoreB < 0) {
+      return showToast('Skor tidak boleh minus.')
+    }
+
+    const updatedMatches = matches.map((item, index) => {
+      if (index === currentRound) {
+        return { ...item, scoreA, scoreB, status: 'done' }
+      }
+      if (index === currentRound + 1 && item.status === 'pending') {
+        return { ...item, status: 'active' }
+      }
+      return item
+    })
+
+    setMatches(updatedMatches)
 
     if (isLast) {
       finishSession()
       navigate('/leaderboard')
-    } else {
-      setCurrentRound(currentRound + 1)
+      return
     }
+
+    goToRound(currentRound + 1)
   }
 
   function handlePostpone() {
-    if (isLast) return alert('Ini match terakhir, tidak bisa dilewati!')
-    setCurrentRound(currentRound + 1)
-    setScoreInputA('')
-    setScoreInputB('')
+    if (isLast) {
+      return showToast('Ini match terakhir, tidak bisa dilewati.')
+    }
+
+    goToRound(currentRound + 1)
   }
 
   function handleFinishSession() {
@@ -74,270 +163,325 @@ function Game() {
     navigate('/leaderboard')
   }
 
-  // Pemain yang tidak main ronde ini
-  const playingIds   = [...match.teamA, ...match.teamB].map(p => p.id)
-  const sittingOut   = match.sittingOut?.length > 0
+  const playingIds = [...match.teamA, ...match.teamB].map((player) => player.id)
+  const sittingOut = match.sittingOut?.length > 0
     ? match.sittingOut
-    : players.filter(p => !playingIds.includes(p.id))
+    : players.filter((player) => !playingIds.includes(player.id))
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col max-w-md mx-auto">
+    <div className="app-screen flex flex-col">
+      <Header sessionFinished={sessionFinished} backTo="/setup" />
 
-      <Header sessionFinished={sessionFinished} />
-
-      {/* Status bar */}
-      <div className="bg-white px-5 py-3 flex gap-2 overflow-x-auto border-b border-gray-100">
-        <span className="bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap">
-          ● Active
-        </span>
-        <span className="bg-gray-100 text-green-700 text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap">
-          {doneCount} Done
-        </span>
-        <span className="bg-gray-100 text-gray-500 text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap">
-          {pendingCount} Pending
-        </span>
-        {sessionName ? (
-          <span className="ml-auto bg-yellow-50 text-yellow-700 text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap border border-yellow-200">
-            🏸 {sessionName}
-          </span>
-        ) : null}
-      </div>
-
-      {/* Navigasi ronde */}
-      <div className="flex items-center justify-between px-5 py-4 bg-white border-b border-gray-100">
-        <button
-          onClick={() => {
-            if (currentRound > 0) {
-              setCurrentRound(currentRound - 1)
-              setScoreInputA('')
-              setScoreInputB('')
-            }
-          }}
-          className={`w-10 h-10 rounded-xl border-2 font-bold text-lg flex items-center justify-center transition-all ${
-            currentRound > 0
-              ? 'border-gray-300 text-gray-600 active:scale-95'
-              : 'border-gray-100 text-gray-300'
-          }`}
-        >
-          ‹
-        </button>
-        <div className="text-center">
-          <h2 className="font-black text-green-900 text-lg">
-            Match {currentRound + 1} / {matches.length}
-          </h2>
-          <p className="text-xs text-gray-400">Target: {targetScore} poin</p>
-        </div>
-        <button
-          onClick={() => {
-            if (currentRound < matches.length - 1) {
-              setCurrentRound(currentRound + 1)
-              setScoreInputA('')
-              setScoreInputB('')
-            }
-          }}
-          className={`w-10 h-10 rounded-xl border-2 font-bold text-lg flex items-center justify-center transition-all ${
-            currentRound < matches.length - 1
-              ? 'border-gray-300 text-gray-600 active:scale-95'
-              : 'border-gray-100 text-gray-300'
-          }`}
-        >
-          ›
-        </button>
-      </div>
-
-      <div className="flex-1 px-5 py-4 flex flex-col gap-4">
-
-        {/* Kartu match */}
-        <div className="bg-green-800 rounded-3xl overflow-hidden shadow-lg">
-
-          {/* Match header */}
-          <div className="px-5 py-3 flex items-center justify-between">
-            <span className="text-yellow-400 font-black text-base">
-              Match {currentRound + 1}
+      <div className={`pointer-events-none fixed left-1/2 top-4 z-50 w-[calc(100%-2rem)] max-w-[358px] -translate-x-1/2 transition-all duration-200 ${
+        toastMessage ? 'translate-y-0 opacity-100' : '-translate-y-3 opacity-0'
+      }`}>
+        <div className="rounded-[18px] border-[2px] border-[#1f4b26] bg-[linear-gradient(135deg,#c6ff10_0%,#f5ffd2_100%)] px-4 py-3 text-[#1f2d13] shadow-[3px_3px_0_rgba(31,75,38,0.98)]">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1f4b26] text-[#c6ff10]">
+              <Info size={16} weight="bold" />
             </span>
-            <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-              match.status === 'done'
-                ? 'bg-green-600 text-white'
-                : 'bg-yellow-400 text-green-900'
-            }`}>
-              {match.status === 'done' ? '✓ Selesai' : '● Berlangsung'}
-            </span>
-          </div>
-
-          {/* Tim A vs Tim B */}
-          <div className="bg-white mx-4 mb-4 rounded-2xl p-4">
-
-            {/* Nama tim */}
-            <div className="grid grid-cols-3 gap-2 items-center mb-4">
-              <div className="text-center">
-                <p className="text-green-600 font-bold text-xs mb-2">Tim A</p>
-                <div className="bg-green-50 rounded-xl p-2.5">
-                  {match.teamA.map(p => (
-                    <p key={p.id} className="font-bold text-green-900 text-sm leading-6">
-                      {p.name}
-                    </p>
-                  ))}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl mb-1">🏆</div>
-                <p className="text-gray-400 font-bold text-xs">vs</p>
-              </div>
-              <div className="text-center">
-                <p className="text-red-500 font-bold text-xs mb-2">Tim B</p>
-                <div className="bg-red-50 rounded-xl p-2.5">
-                  {match.teamB.map(p => (
-                    <p key={p.id} className="font-bold text-green-900 text-sm leading-6">
-                      {p.name}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Input skor */}
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div>
-                <p className="text-gray-400 text-xs font-medium mb-1">Skor Tim A</p>
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="0"
-                  value={scoreInputA}
-                  onChange={e => setScoreInputA(e.target.value)}
-                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-center text-2xl font-black text-green-900 outline-none focus:border-green-500"
-                />
-              </div>
-              <div>
-                <p className="text-gray-400 text-xs font-medium mb-1">Skor Tim B</p>
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="0"
-                  value={scoreInputB}
-                  onChange={e => setScoreInputB(e.target.value)}
-                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-center text-2xl font-black text-green-900 outline-none focus:border-red-400"
-                />
-              </div>
-            </div>
-
-            {/* Tombol aksi */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => { setScoreInputA(''); setScoreInputB('') }}
-                className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-lg active:scale-95 transition-transform"
-                title="Reset skor"
-              >
-                🔄
-              </button>
-              <button
-                onClick={handlePostpone}
-                className="flex-1 bg-yellow-50 border-2 border-yellow-300 text-yellow-700 font-bold py-3 rounded-xl active:scale-95 transition-transform text-sm"
-              >
-                ⏱ Lewati
-              </button>
-              <button
-                onClick={handleSubmit}
-                className="flex-1 bg-green-700 text-white font-bold py-3 rounded-xl active:scale-95 transition-transform text-sm shadow"
-              >
-                ✓ Submit
-              </button>
+            <div>
+              <div className="font-display text-[0.98rem] uppercase leading-none">Match Belum Siap</div>
+              <div className="mt-1 text-[0.8rem] font-semibold leading-5">{toastMessage}</div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Istirahat ronde ini */}
-        {sittingOut.length > 0 && (
-          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
-            <p className="text-blue-700 font-bold text-sm mb-2">
-              Istirahat Ronde Ini ({sittingOut.length} orang)
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {sittingOut.map(p => (
-                <span
-                  key={p.id}
-                  className="bg-white border border-blue-200 text-blue-600 text-sm font-medium px-3 py-1 rounded-full"
-                >
-                  {p.name}
+      <main className="flex-1 px-5 pb-10">
+        <div className="flex flex-col gap-4">
+          <section className="flex items-start gap-2 px-[2px] py-[2px]">
+            <div className="flex-1 overflow-x-auto py-[2px] whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex w-max gap-2 pl-[1px]">
+                <span className="inline-flex shrink-0 items-center gap-2 rounded-full border-[2px] border-[#1f4b26] bg-[#c6ff10] px-3 py-1 text-[0.74rem] font-bold text-[#1f2d13] shadow-[1.5px_1.5px_0_rgba(31,75,38,0.98)]">
+                  <span className="text-[0.5rem]">●</span>
+                  Active
                 </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Tombol akhiri sesi */}
-        <button
-          onClick={handleFinishSession}
-          className="w-full bg-red-50 border-2 border-red-200 text-red-500 font-bold text-sm py-3.5 rounded-2xl active:scale-95 transition-transform"
-        >
-          🏁 Akhiri Sesi & Lihat Leaderboard
-        </button>
-
-        {/* Tombol selesai kalau match terakhir */}
-        {isLast && (
-          <button
-            onClick={() => {
-              finishSession()
-              navigate('/leaderboard')
-            }}
-            className="w-full bg-yellow-400 text-green-900 font-black text-lg py-4 rounded-2xl shadow active:scale-95 transition-transform"
-          >
-            🏆 Selesai & Lihat Leaderboard
-          </button>
-        )}
-
-      </div>
-
-      {showFinishModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-green-950/70 px-5">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="finish-session-title"
-            className="w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-2xl"
-          >
-            <div className="bg-red-50 px-5 py-5 text-center">
-              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100 text-2xl">
-                🏁
+                <span className="inline-flex shrink-0 items-center rounded-full border-[2px] border-[#1f4b26] bg-white px-3 py-1 text-[0.74rem] font-bold text-[#1f2d13]">
+                  {doneCount} Done
+                </span>
+                <span className="inline-flex shrink-0 items-center rounded-full border-[2px] border-[#1f4b26] bg-white px-3 py-1 text-[0.74rem] font-bold text-[#1f2d13]">
+                  {pendingCount + activeCount} Pending
+                </span>
               </div>
-              <h3 id="finish-session-title" className="text-xl font-black text-green-900">
+            </div>
+
+            {sessionName ? (
+              <span className="inline-flex max-w-[11rem] shrink-0 items-center gap-2 rounded-full border-[2px] border-[#1f4b26] bg-[#3f9f37] px-3 py-1 text-[0.74rem] font-bold text-white shadow-[1.5px_1.5px_0_rgba(31,75,38,0.98)]">
+                <FlagCheckered size={12} weight="bold" />
+                <span className="truncate">{sessionName}</span>
+              </span>
+            ) : null}
+          </section>
+
+          <section className="flex items-center justify-between border-t border-[#cfd8c8] pt-3">
+            <button
+              type="button"
+              onClick={() => goToRound(currentRound - 1)}
+              disabled={currentRound === 0}
+              className={`flex h-9 w-9 items-center justify-center rounded-[12px] border-[2px] shadow-[2px_2px_0_#1f4b26] transition ${
+                currentRound === 0
+                  ? 'border-[#1f4b26] bg-[#edf4e7] text-[#88a084]'
+                  : 'border-[#1f4b26] bg-[#c6ff10] text-[#1f2d13]'
+              }`}
+            >
+              <CaretLeft size={18} weight="bold" />
+            </button>
+
+            <div className="text-center">
+              <div className="font-display text-[1.3rem] leading-none text-[#1f1f1f]">
+                Match {currentRound + 1} / {matches.length}
+              </div>
+              <p className="mt-1 text-[0.74rem] font-semibold text-[#6d7c6d]">Target {targetScore} poin</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => goToRound(currentRound + 1)}
+              disabled={currentRound === matches.length - 1}
+              className={`flex h-9 w-9 items-center justify-center rounded-[12px] border-[2px] shadow-[2px_2px_0_#1f4b26] transition ${
+                currentRound === matches.length - 1
+                  ? 'border-[#9db694] bg-[#edf4e7] text-[#88a084]'
+                  : 'border-[#1f4b26] bg-[#c6ff10] text-[#1f2d13]'
+              }`}
+            >
+              <CaretRight size={18} weight="bold" />
+            </button>
+          </section>
+
+          <section className="rounded-[22px] border-[2px] border-[#1f4b26] bg-[#3f9f37] p-2 shadow-[2px_2px_0_#1f4b26]">
+            <div className="mb-2 flex items-center justify-between px-1.5 pt-1">
+              <div className="font-display text-[1rem] uppercase leading-none text-white">
+                Match {currentRound + 1}
+              </div>
+              <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.7rem] font-bold ${currentStatusClass}`}>
+                <span className="text-[0.5rem]">●</span>
+                {currentStatusLabel}
+              </div>
+            </div>
+
+            <div className="rounded-[18px] border-[2px] border-[#1f4b26] bg-white px-4 py-5">
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                <div className="text-center">
+                  <p className="mb-2 font-display text-[1rem] uppercase leading-none text-[#325a30]">Tim A</p>
+                  <div className="rounded-[14px] border-[2px] border-[#1f4b26] bg-[#3f9f37] px-2 py-3 text-white shadow-[2px_2px_0_#1f4b26]">
+                    {match.teamA.map((player) => (
+                      <p key={player.id} className="text-[0.95rem] font-bold leading-6">
+                        {player.name}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="text-center">
+                  <img src={trophyIcon} alt="" aria-hidden="true" className="mx-auto w-8 h-auto" />
+                  <p className="mt-1 font-display text-[1.25rem] uppercase leading-none text-[#a96b00]">VS</p>
+                </div>
+
+                <div className="text-center">
+                  <p className="mb-2 font-display text-[1rem] uppercase leading-none text-[#325a30]">Tim B</p>
+                  <div className="rounded-[14px] border-[2px] border-[#1f4b26] bg-[#3f9f37] px-2 py-3 text-white shadow-[2px_2px_0_#1f4b26]">
+                    {match.teamB.map((player) => (
+                      <p key={player.id} className="text-[0.95rem] font-bold leading-6">
+                        {player.name}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <div>
+                  <span className="mb-2 block font-display text-[0.8rem] uppercase leading-none text-[#1f2d13]">
+                    Skor Tim A
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => openScorePicker('A')}
+                    className="w-full rounded-[14px] border-[2px] border-[#1f1f1f] bg-[#1f1f1f] px-3 py-3 text-center font-display text-[2rem] leading-none text-white transition active:translate-y-px"
+                  >
+                    {scoreInputA || '0'}
+                  </button>
+                </div>
+
+                <div>
+                  <span className="mb-2 block font-display text-[0.8rem] uppercase leading-none text-[#1f2d13]">
+                    Skor Tim B
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => openScorePicker('B')}
+                    className="w-full rounded-[14px] border-[2px] border-[#1f1f1f] bg-[#1f1f1f] px-3 py-3 text-center font-display text-[2rem] leading-none text-white transition active:translate-y-px"
+                  >
+                    {scoreInputB || '0'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-5 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScoreInputA('')
+                    setScoreInputB('')
+                  }}
+                  className="flex flex-1 items-center justify-center rounded-[14px] border-[1.5px] border-[#8fda8c] bg-white text-[#1f4b26] transition active:translate-y-px"
+                  title="Reset skor"
+                >
+                  <ArrowClockwise size={18} weight="bold" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePostpone}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-[#8fda8c] bg-white px-3 py-3 text-[0.95rem] font-bold text-[#1f4b26] transition active:translate-y-px"
+                >
+                  <ClockCountdown size={18} weight="bold" />
+                  <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>Lewati</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-[14px] border-[2px] border-[#1f4b26] bg-[#c6ff10] px-3 py-3 text-[0.95rem] font-bold text-[#1f2d13] shadow-[2px_2px_0_#1f4b26] transition active:translate-y-px"
+                >
+                  <Check size={18} weight="bold" />
+                  <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>Submit</span>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {sittingOut.length > 0 ? (
+            <section className="rounded-[20px] border-[2px] border-[#1f4b26] bg-white px-4 py-4 shadow-[2px_2px_0_#1f4b26]">
+              <div className="font-display text-[0.8rem] uppercase leading-none text-[#325a30]">
+                Istirahat Match Ini ({sittingOut.length} orang)
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {sittingOut.map((player) => (
+                  <span
+                    key={player.id}
+                    className="rounded-full border-[1.5px] border-[#1f4b26] bg-[#3f9f37] px-3 py-1 text-[0.78rem] font-semibold text-white shadow-[1.5px_1.5px_0_#1f4b26]"
+                  >
+                    {player.name}
+                  </span>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={handleFinishSession}
+            className="w-full rounded-[18px] border-[2px] border-[#8f4a3d] bg-[#e4a79a] px-4 py-3 font-display text-[1.25rem] uppercase leading-none text-[#4a241d] shadow-[2px_2px_0_rgba(143,74,61,100)] transition active:translate-y-px"
+          >
+            Akhiri Sesi & Lihat Leaderboard
+          </button>
+        </div>
+      </main>
+
+      {showFinishModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#173019]/70 px-5">
+          <div className="w-full max-w-sm rounded-[24px] border-[2px] border-[#1f4b26] bg-white p-4 shadow-[4px_4px_0_rgba(31,75,38,0.98)]">
+            <div className="rounded-[18px] bg-[#f6eee8] px-4 py-5 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[16px] bg-[#e4a79a] text-[#4a241d]">
+                <StrategyIcon size={28} weight="regular" />
+              </div>
+              <div className="mt-4 font-display text-[1.5rem] uppercase leading-none text-[#1f4b26]">
                 Akhiri sesi sekarang?
-              </h3>
-              <p className="mt-2 text-sm font-medium leading-6 text-gray-500">
+              </div>
+              <p className="mt-2 text-[0.82rem] font-medium leading-6 text-[#6d7c6d]">
                 Leaderboard akan dihitung dari match yang sudah selesai.
               </p>
             </div>
 
-            <div className="px-5 py-4">
-              <div className="grid grid-cols-2 gap-3 rounded-2xl bg-gray-50 p-3">
-                <div className="text-center">
-                  <p className="text-2xl font-black text-green-700">{doneCount}</p>
-                  <p className="text-xs font-bold text-gray-400">Done</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-black text-red-500">{pendingCount}</p>
-                  <p className="text-xs font-bold text-gray-400">Pending</p>
-                </div>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="rounded-[16px] border-[2px] border-[#1f4b26] bg-[#edf4e7] px-3 py-3 text-center">
+                <div className="font-display text-[1.4rem] leading-none text-[#1f4b26]">{doneCount}</div>
+                <div className="mt-1 text-[0.72rem] font-bold uppercase text-[#587158]">Done</div>
               </div>
+              <div className="rounded-[16px] border-[2px] border-[#1f4b26] bg-[#f7eee7] px-3 py-3 text-center">
+                <div className="font-display text-[1.4rem] leading-none text-[#7c382d]">{pendingCount + activeCount}</div>
+                <div className="mt-1 text-[0.72rem] font-bold uppercase text-[#9d5e52]">Pending</div>
+              </div>
+            </div>
 
-              <div className="mt-5 flex gap-3">
-                <button
-                  onClick={() => setShowFinishModal(false)}
-                  className="flex-1 rounded-2xl border-2 border-gray-200 bg-white py-3 text-sm font-black text-gray-500 active:scale-95 transition-transform"
-                >
-                  Batal
-                </button>
-                <button
-                  onClick={confirmFinishSession}
-                  className="flex-1 rounded-2xl bg-red-500 py-3 text-sm font-black text-white shadow active:scale-95 transition-transform"
-                >
-                  Akhiri
-                </button>
-              </div>
+            <div className="mt-4 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowFinishModal(false)}
+                className="flex-1 rounded-[16px] border-[2px] border-[#c7d6c3] bg-white py-3 text-[0.9rem] font-bold text-[#6d7c6d] transition active:translate-y-px"
+              >
+                <span style={{ fontWeight: 800 }}>Batal</span>
+              </button>
+              <button
+                type="button"
+                onClick={confirmFinishSession}
+                className="flex-1 rounded-[16px] border-[2px] border-[#8f4a3d] bg-[#e4a79a] py-3 text-[0.9rem] font-bold text-[#4a241d] shadow-[2px_2px_0_rgba(143,74,61,100)] transition active:translate-y-px"
+              >
+                <span style={{ fontWeight: 800 }}>Akhiri</span>
+              </button>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
+
+      {scorePickerTarget ? (
+        <div className="fixed inset-0 z-50 flex justify-center bg-black/75 px-5">
+          <div className="flex w-full max-w-[390px] items-center">
+            <div className="w-full rounded-[22px] border-[2px] border-[#1f4b26] bg-[#3f9f37] p-3 shadow-[4px_4px_0_rgba(19,63,27,0.98)]">
+            <div className="pb-2">
+              <div className="font-display text-[1.3rem] uppercase leading-none text-white">Select Score</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <span className="rounded-full border-[1.5px] border-[#1f4b26] bg-[#c6ff10] px-3 py-1 text-[0.72rem] font-bold text-[#1f2d13]">
+                  {getFormatLabel(format)}
+                </span>
+                <span className="rounded-full border-[1.5px] border-[#1f4b26] bg-[#c6ff10] px-3 py-1 text-[0.72rem] font-bold text-[#1f2d13]">
+                  Match {currentRound + 1}
+                </span>
+              </div>
+              <div className="mt-3 text-[0.95rem] font-bold text-white">
+                {scorePickerTarget === 'A'
+                  ? match.teamA.map((player) => player.name).join(' ')
+                  : match.teamB.map((player) => player.name).join(' ')}
+              </div>
+            </div>
+
+            <div className="mt-2 grid grid-cols-6 gap-2">
+              {scoreOptions.map((score) => {
+                const isSelected = (scorePickerTarget === 'A' && scoreInputA === String(score)) ||
+                  (scorePickerTarget === 'B' && scoreInputB === String(score))
+
+                return (
+                  <button
+                    key={score}
+                    type="button"
+                    onClick={() => handleScorePick(score)}
+                    className={`flex h-10 items-center justify-center rounded-[8px] border font-extrabold transition active:translate-y-px ${
+                      isSelected
+                        ? 'border-[#1f4b26] bg-[#c6ff10] text-[#1f2d13] shadow-[1.5px_1.5px_0_rgba(31,75,38,0.98)]'
+                        : 'border-[#567850] bg-white text-[#2f5d2f] shadow-[1.5px_1.5px_0_rgba(31,75,38,0.98)]'
+                    }`}
+                  >
+                    {score}
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={closeScorePicker}
+                className="rounded-[8px] bg-[#12411c] px-4 py-2 text-[0.84rem] font-bold text-white transition active:translate-y-px"
+              >
+                close
+              </button>
+            </div>
+          </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

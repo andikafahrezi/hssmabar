@@ -222,8 +222,8 @@ function Setup() {
                     onClick={() => setFormat(item.id)}
                     className={`relative min-h-[160px] overflow-hidden rounded-[16px] border-2 p-3 text-left transition ${
                       isActive
-                        ? 'border-[#1f4b26] bg-[#3f9f37] text-white shadow-[2px_2px_0_rgba(31,75,38,0.98)]'
-                        : 'border-[#1f4b26] bg-white text-[#1f4b26] shadow-[2px_2px_0_rgba(31,75,38,0.98)]'
+                        ? 'border-[#1f4b26] bg-[#3f9f37] text-white shadow-[2px_2px_0_rgba(31,75,38,100)]'
+                        : 'border-[#1f4b26] bg-white text-[#1f4b26] shadow-[2px_2px_0_rgba(31,75,38,100)]'
                     }`}
                   >
                     <img
@@ -274,8 +274,8 @@ function Setup() {
                     onClick={() => setTargetScore(item.score)}
                     className={`rounded-[14px] border-[2px] px-3 py-3 text-left transition ${
                       isActive
-                        ? 'border-[#1f4b26] bg-[#3f9f37] text-white shadow-[2px_2px_0_rgba(31,75,38,0.98)]'
-                        : 'border-[#1f4b26] bg-white text-[#1f4b26] shadow-[2px_2px_0_rgba(31,75,38,0.98)]'
+                        ? 'border-[#1f4b26] bg-[#3f9f37] text-white shadow-[2px_2px_0_rgba(31,75,38,100)]'
+                        : 'border-[#1f4b26] bg-white text-[#1f4b26] shadow-[2px_2px_0_rgba(31,75,38,100)]'
                     }`}
                   >
                     <div className="font-display text-[1.3rem] leading-none">{item.score}</div>
@@ -296,7 +296,7 @@ function Setup() {
               </span>
             </div>
 
-            <div className="rounded-[18px] border-[2px] border-[#1f4b26] bg-white p-3 shadow-[2px_2px_0_rgba(31,75,38,0.98)]">
+            <div className="rounded-[18px] border-[2px] border-[#1f4b26] bg-white p-3 shadow-[2px_2px_0_rgba(31,75,38,100)]">
               <input
                 type="text"
                 value={nameInput}
@@ -317,7 +317,7 @@ function Setup() {
                   }`}
                 >
                   <span className="material-symbols-rounded !text-[18px]">face</span>
-                  <span style={{ fontWeight: 600 }}>Male</span>
+                  <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Male</span>
                 </button>
                 <button
                   type="button"
@@ -329,15 +329,15 @@ function Setup() {
                   }`}
                 >
                   <span className="material-symbols-rounded !text-[18px]">face_4</span>
-                  <span style={{ fontWeight: 600 }}>Female</span>
+                  <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Female</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleAddPlayer}
-                  className="flex h-11 items-center justify-center gap-2 rounded-[12px] border-[2px] border-[#1f4b26] bg-[#c6ff10] shadow-[2px_2px_0_rgba(31,75,38,0.98)] px-4 text-[0.84rem] font-bold text-[#1f2d13] transition active:translate-y-px"
+                  className="flex h-11 items-center justify-center gap-2 rounded-[12px] border-[2px] border-[#1f4b26] bg-[#c6ff10] shadow-[2px_2px_0_rgba(31,75,38,100)] px-4 text-[0.84rem] font-bold text-[#1f2d13] transition active:translate-y-px"
                 >
                   <Plus size={15} weight="bold" />
-                  <span style={{ fontWeight: 800 }}>Add</span>
+                  <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>Add</span>
                 </button>
               </div>
             </div>
@@ -350,7 +350,7 @@ function Setup() {
               ) : null}
 
               {players.map((player, index) => (
-                <div key={player.id} className="app-soft-card px-3 py-2.5 shadow-[2px_2px_0_rgba(31,75,38,0.98)]">
+                <div key={player.id} className="app-soft-card px-3 py-2.5 shadow-[2px_2px_0_rgba(31,75,38,100)]">
                   {editingId === player.id ? (
                     <div className="flex items-center gap-2">
                       <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#edf4e7] text-[#1f4b26]">
