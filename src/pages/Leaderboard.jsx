@@ -7,7 +7,7 @@ import {
   Target,
   UsersThree,
 } from '@phosphor-icons/react'
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import confetti from 'canvas-confetti'
 import { useNavigate } from 'react-router-dom'
 import firstPlaceMedal from '../assets/icons/1st-place-medal.svg'
@@ -214,6 +214,7 @@ function Leaderboard() {
               <button
                 type="button"
                 aria-label="Bagikan sesi"
+                onClick={() => navigate('/result')}
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/95 transition hover:bg-white/10"
               >
                 <ShareNetwork size={16} weight="bold" />
