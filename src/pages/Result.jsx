@@ -10,11 +10,10 @@ import {
 } from '@phosphor-icons/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import logoVertical from '../assets/logohssmabar-vertical.svg'
+import logoPrimary from '../assets/logohssmabar.svg'
 import firstPlaceMedal from '../assets/icons/1st-place-medal.svg'
 import secondPlaceMedal from '../assets/icons/2nd-place-medal.svg'
 import thirdPlaceMedal from '../assets/icons/3rd-place-medal.svg'
-import vectorPattern from '../assets/patterns/vector pattern.svg'
 import Header from '../components/Header'
 import useSessionStore from '../store/sessionStore'
 
@@ -172,9 +171,8 @@ function Result() {
     let active = true
     const loadAll = async () => {
       try {
-        const [logoImg, patternImg, medal1, medal2, medal3] = await Promise.all([
-          loadImage(logoVertical),
-          loadImage(vectorPattern),
+        const [logoImg, medal1, medal2, medal3] = await Promise.all([
+          loadImage(logoPrimary),
           loadImage(firstPlaceMedal).catch(() => null),
           loadImage(secondPlaceMedal).catch(() => null),
           loadImage(thirdPlaceMedal).catch(() => null),
@@ -182,7 +180,6 @@ function Result() {
         if (active) {
           setLoadedAssets({
             logo: logoImg,
-            pattern: patternImg,
             medal1,
             medal2,
             medal3,
@@ -249,26 +246,9 @@ function Result() {
       }
       ctx.fillStyle = grad
       ctx.fillRect(0, 0, 1080, 1920)
-
-      // Gambar Pattern Lapangan/Badminton Overlay
-      if (loadedAssets?.pattern) {
-        ctx.save()
-        ctx.globalAlpha = theme === 'lime' ? 0.08 : 0.12
-        ctx.drawImage(loadedAssets.pattern, 0, 0, 1080, 1920)
-        ctx.restore()
-      }
     }
 
-    // 2. Gambar Logo Vertikal HSS Mabar
-    if (loadedAssets?.logo) {
-      const logoWidth = 260
-      const logoHeight = 260 * (loadedAssets.logo.height / loadedAssets.logo.width)
-      const logoX = 540 - logoWidth / 2
-      const logoY = 90
-      ctx.drawImage(loadedAssets.logo, logoX, logoY, logoWidth, logoHeight)
-    }
-
-    // 3. Judul Turnamen / Sesi
+    // 2. Judul Turnamen / Sesi
     const titleY = 330
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
@@ -293,21 +273,32 @@ function Result() {
     const formatLabel = getFormatLabel(format).toUpperCase()
     ctx.fillText(`${formatLabel}  •  TARGET ${targetScore} POIN`, 540, titleY + 60)
 
-    // 4. Header Tabel Klasemen
+    // 3. Header Tabel Klasemen
     const tableTop = 470
-    ctx.fillStyle = theme === 'lime' ? 'rgba(31, 75, 38, 0.75)' : 'rgba(255, 255, 255, 0.7)'
+    const statsColX = {
+      record: 610,
+      diff: 735,
+      main: 850,
+      points: 955,
+    }
+    const tableHeaderColor = theme === 'lime'
+      ? 'rgba(31, 75, 38, 0.75)'
+      : theme === 'carbon'
+        ? subColor
+        : 'rgba(255, 255, 255, 0.7)'
+    ctx.fillStyle = tableHeaderColor
     ctx.font = 'bold 24px "Plus Jakarta Sans"'
 
     ctx.textAlign = 'left'
     ctx.fillText('#  PEMAIN', 100, tableTop)
 
-    ctx.textAlign = 'right'
-    ctx.fillText('W-D-L', 640, tableTop)
-    ctx.fillText('DIFF', 760, tableTop)
-    ctx.fillText('MAIN', 880, tableTop)
-    ctx.fillText('POIN', 980, tableTop)
+    ctx.textAlign = 'center'
+    ctx.fillText('W-D-L', statsColX.record, tableTop)
+    ctx.fillText('DIFF', statsColX.diff, tableTop)
+    ctx.fillText('MAIN', statsColX.main, tableTop)
+    ctx.fillText('POIN', statsColX.points, tableTop)
 
-    // 5. Gambar Baris Tabel Peringkat
+    // 4. Gambar Baris Tabel Peringkat
     const startIdx = startRank - 1
     const endIdx = Math.min(startIdx + totalPlayers, standings.length)
     const rowsToShow = standings.slice(startIdx, endIdx)
@@ -391,12 +382,12 @@ function Result() {
 
       // Data Statistik Pemain
       ctx.textBaseline = 'middle'
-      ctx.textAlign = 'right'
+      ctx.textAlign = 'center'
 
       // Rekor (W-D-L)
       ctx.font = 'bold 28px "Plus Jakarta Sans"'
       ctx.fillStyle = statsColor
-      ctx.fillText(`${player.wins}-${player.draws}-${player.losses}`, 640, rankCenterY)
+      ctx.fillText(`${player.wins}-${player.draws}-${player.losses}`, statsColX.record, rankCenterY)
 
       // Selisih Poin (Diff)
       const pointDiff = player.pointsScored - player.pointsConceded
@@ -408,30 +399,38 @@ function Result() {
         diffColor = pointDiff > 0 ? '#38b03e' : pointDiff < 0 ? '#e04141' : statsColor
       }
       ctx.fillStyle = diffColor
-      ctx.fillText(diffText, 760, rankCenterY)
+      ctx.fillText(diffText, statsColX.diff, rankCenterY)
 
       // Total Main
       ctx.fillStyle = statsColor
-      ctx.fillText(String(player.matchesPlayed), 880, rankCenterY)
+      ctx.fillText(String(player.matchesPlayed), statsColX.main, rankCenterY)
 
       // Poin yang diperoleh
       ctx.font = 'bold 32px Oswald'
       ctx.fillStyle = nameColor
-      ctx.fillText(String(player.pointsScored), 980, rankCenterY)
+      ctx.fillText(String(player.pointsScored), statsColX.points, rankCenterY)
     })
 
-    // 6. Gambar Footer Branding
+    // Gunakan versi logo terang saat footer berada di atas background non-transparan.
+    const useLightFooterLogo = !bgTransparent
+
+    // 5. Gambar Footer Branding
     const footerY = 1750
     if (loadedAssets?.logo) {
-      const footerLogoW = 120
-      const footerLogoH = 120 * (loadedAssets.logo.height / loadedAssets.logo.width)
+      const footerLogoW = 350
+      const footerLogoH = 350 * (loadedAssets.logo.height / loadedAssets.logo.width)
+      ctx.save()
+      if (useLightFooterLogo) {
+        ctx.filter = 'brightness(0) invert(1)'
+      }
       ctx.drawImage(loadedAssets.logo, 540 - footerLogoW / 2, footerY, footerLogoW, footerLogoH)
+      ctx.restore()
     }
 
     ctx.textAlign = 'center'
     ctx.font = 'bold 22px "Plus Jakarta Sans"'
-    ctx.fillStyle = theme === 'lime' ? 'rgba(31, 75, 38, 0.65)' : 'rgba(255, 255, 255, 0.5)'
-    ctx.fillText('shuttlemabar.vercel.app', 540, footerY + 95)
+    ctx.fillStyle = useLightFooterLogo ? 'rgba(255, 255, 255, 0.58)' : 'rgba(31, 75, 38, 0.68)'
+    ctx.fillText('hssmabar v1.0.0', 540, footerY + 120)
   }, [
     theme,
     startRank,
@@ -490,7 +489,7 @@ function Result() {
 
     const dataUrl = canvas.toDataURL('image/png')
     const link = document.createElement('a')
-    link.download = `shuttlemabar-${sessionName ? sessionName.replace(/\s+/g, '-') : 'session'}-leaderboard.png`
+    link.download = `hssmabar-${sessionName ? sessionName.replace(/\s+/g, '-') : 'session'}-leaderboard.png`
     link.href = dataUrl
     link.click()
     showToast('Klasemen berhasil disimpan!')
@@ -568,14 +567,14 @@ function Result() {
       <main className="flex-1 px-5 pb-10">
         <div className="flex flex-col gap-6">
           <section className="text-center">
-            <h1 className="app-section-title">Bagikan Klasemen</h1>
-            <p className="app-section-subtitle">Sesuaikan desain klasemen dan bagikan ke Instagram Story</p>
+            <h1 className="app-section-title">Bagikan Template</h1>
+            <p className="app-section-subtitle">Sesuaikan desain template dan share</p>
           </section>
 
           {/* Kolom Preview Kanvas */}
           <section className="flex justify-center">
             <div
-              className="relative aspect-[9/16] w-full max-w-[280px] overflow-hidden rounded-[24px] border-[3px] border-[#1f4b26] shadow-[4px_4px_0_rgba(31,75,38,0.98)]"
+              className="relative aspect-[9/16] w-full max-w-[280px] overflow-hidden rounded-[24px] border-[2px] border-[#1f4b26] shadow-[0_0_0_rgba(31,75,38,0.98)]"
               style={
                 (bgTransparent && !bgImage)
                   ? {
@@ -612,7 +611,7 @@ function Result() {
             <section className="rounded-[20px] border-[2px] border-[#1f4b26] bg-white p-4 shadow-[2px_2px_0_#1f4b26]">
               <div className="mb-3 flex items-center gap-2 font-display text-[1rem] uppercase text-[#1f4b26]">
                 <Palette size={18} weight="bold" />
-                <span>Pilih Tema Klasemen</span>
+                <span>Pilih Tema Template</span>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {[
@@ -721,7 +720,7 @@ function Result() {
                       className="flex w-full min-h-12 items-center justify-center gap-2 rounded-[14px] border-[2px] border-dashed border-[#1f4b26] bg-[#edf4e7] px-4 font-semibold text-[#1f4b26] transition hover:bg-[#d0e9cb]/30"
                     >
                       <ImageIcon size={16} weight="bold" />
-                      <span className="text-[0.84rem]">Unggah Foto Story</span>
+                      <span className="text-[0.84rem]">Unggah Foto</span>
                     </button>
                   ) : (
                     <div className="flex flex-col gap-3">
@@ -765,7 +764,7 @@ function Result() {
                 </div>
               ) : (
                 <p className="mt-2 text-[0.72rem] font-medium leading-5 text-[#6d7c6d]">
-                  Latar belakang kanvas transparan aktif. Unduh gambar ini dan tempelkan di atas foto pilihan Anda langsung di dalam Instagram Story.
+                  Latar belakang kanvas transparan aktif. Unduh gambar ini dan tempelkan di atas foto pilihan Anda langsung di dalam story kalo mau upload ke story.
                 </p>
               )}
             </section>
@@ -778,7 +777,7 @@ function Result() {
                 className="app-primary-button flex items-center justify-center gap-2"
               >
                 <ShareNetwork size={20} weight="fill" />
-                <span>Bagikan ke Story</span>
+                <span>Bagikan</span>
               </button>
 
               <button
