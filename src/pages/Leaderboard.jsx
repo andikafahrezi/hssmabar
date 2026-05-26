@@ -6,8 +6,9 @@ import {
   ShareNetwork,
   Target,
   UsersThree,
+  WarningCircle,
 } from '@phosphor-icons/react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import confetti from 'canvas-confetti'
 import { useNavigate } from 'react-router-dom'
 import firstPlaceMedal from '../assets/icons/1st-place-medal.svg'
@@ -19,66 +20,7 @@ import podiumThird from '../assets/podium/podium 3.svg'
 import vectorPattern from '../assets/patterns/vector pattern.svg'
 import Header from '../components/Header'
 import useSessionStore from '../store/sessionStore'
-
-function calculateStandings(players, matches) {
-  const stats = {}
-
-  players.forEach((player) => {
-    stats[player.id] = {
-      ...player,
-      wins: 0,
-      losses: 0,
-      draws: 0,
-      pointsScored: 0,
-      pointsConceded: 0,
-      matchesPlayed: 0,
-    }
-  })
-
-  matches
-    .filter((match) => match.status === 'done')
-    .forEach((match) => {
-      const winner = match.scoreA > match.scoreB
-        ? 'A'
-        : match.scoreB > match.scoreA
-          ? 'B'
-          : 'draw'
-
-      const processTeam = (team, scored, conceded) => {
-        team.forEach((player) => {
-          if (!stats[player.id]) return
-
-          stats[player.id].matchesPlayed++
-          stats[player.id].pointsScored += scored
-          stats[player.id].pointsConceded += conceded
-
-          if (winner === 'draw') {
-            stats[player.id].draws++
-          } else if (
-            (winner === 'A' && team === match.teamA) ||
-            (winner === 'B' && team === match.teamB)
-          ) {
-            stats[player.id].wins++
-          } else {
-            stats[player.id].losses++
-          }
-        })
-      }
-
-      processTeam(match.teamA, match.scoreA, match.scoreB)
-      processTeam(match.teamB, match.scoreB, match.scoreA)
-    })
-
-  return Object.values(stats).sort((playerA, playerB) => {
-    if (playerB.wins !== playerA.wins) return playerB.wins - playerA.wins
-
-    const diffA = playerA.pointsScored - playerA.pointsConceded
-    const diffB = playerB.pointsScored - playerB.pointsConceded
-    if (diffB !== diffA) return diffB - diffA
-
-    return playerB.pointsScored - playerA.pointsScored
-  })
-}
+import { calculateStandings } from '../utils/calculateStandings'
 
 function getFormatLabel(format) {
   switch (format) {
@@ -120,6 +62,7 @@ function PodiumCard({ player, place, podiumAsset }) {
 
 function Leaderboard() {
   const navigate = useNavigate()
+  const [exitAction, setExitAction] = useState(null)
   const {
     players,
     matches,
@@ -178,6 +121,29 @@ function Leaderboard() {
   const doneMatches = matches.filter((match) => match.status === 'done').length
   const totalMatches = matches.length
   const progressWidth = totalMatches > 0 ? `${(doneMatches / totalMatches) * 100}%` : '0%'
+
+  function openExitDialog(action) {
+    setExitAction(action)
+  }
+
+  function closeExitDialog() {
+    setExitAction(null)
+  }
+
+  function goToTemplate() {
+    closeExitDialog()
+    navigate('/result')
+  }
+
+  function confirmExit() {
+    if (exitAction === 'new-session') {
+      resetAll()
+      navigate('/')
+      return
+    }
+
+    navigate('/')
+  }
 
   if (players.length === 0) {
     return (
@@ -347,10 +313,7 @@ function Leaderboard() {
           <div className="flex flex-col gap-3 pt-1">
             <button
               type="button"
-              onClick={() => {
-                resetAll()
-                navigate('/')
-              }}
+              onClick={() => openExitDialog('new-session')}
               className="w-full rounded-[18px] border-[2px] border-[#1f4b26] bg-[#c6ff10] px-4 py-4 text-[#1f2d13] shadow-[2px_2px_0_#1f4b26] transition active:translate-y-px"
             >
               <span style={{ fontWeight: 800 }} className="font-display text-[1rem] uppercase leading-none">Sesi Baru</span>
@@ -358,7 +321,7 @@ function Leaderboard() {
 
             <button
               type="button"
-              onClick={() => navigate('/')}
+              onClick={() => openExitDialog('home')}
               className="w-full rounded-[18px] border-[2px] border-[#1f4b26] bg-white px-4 py-4 text-[#2c5e2d] shadow-[2px_2px_0_#1f4b26] transition active:translate-y-px"
             >
               <span style={{ fontWeight: 800 }} className="font-display text-[1rem] uppercase leading-none">Kembali ke Home</span>
@@ -366,6 +329,51 @@ function Leaderboard() {
           </div>
         </div>
       </main>
+
+      {exitAction ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#173019]/70 px-5">
+          <div className="w-full max-w-sm rounded-[24px] border-[2px] border-[#1f4b26] bg-white p-4 shadow-[4px_4px_0_rgba(31,75,38,0.98)]">
+            <div className="rounded-[18px] bg-[#f6eee8] px-4 py-5 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[16px] bg-[#e4a79a] text-[#4a241d]">
+                <WarningCircle size={30} weight="bold" />
+              </div>
+              <div className="mt-4 font-display text-[1.45rem] uppercase leading-none text-[#1f4b26]">
+                Simpan hasil dulu?
+              </div>
+              <p className="mt-2 text-[0.82rem] font-medium leading-6 text-[#6d7c6d]">
+                Screenshot leaderboard atau download template sebelum lanjut. Kalau mulai sesi baru, data turnamen ini akan hilang.
+              </p>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={closeExitDialog}
+                className="rounded-[16px] border-[2px] border-[#c7d6c3] bg-white py-3 text-[0.9rem] font-bold text-[#6d7c6d] transition active:translate-y-px"
+              >
+                <span style={{ fontWeight: 800 }}>Batal</span>
+              </button>
+              <button
+                type="button"
+                onClick={goToTemplate}
+                className="rounded-[16px] border-[2px] border-[#1f4b26] bg-[#c6ff10] py-3 text-[0.9rem] font-bold text-[#1f2d13] shadow-[2px_2px_0_rgba(31,75,38,0.98)] transition active:translate-y-px"
+              >
+                <span style={{ fontWeight: 800 }}>Template</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={confirmExit}
+              className="mt-3 w-full rounded-[16px] border-[2px] border-[#8f4a3d] bg-[#e4a79a] py-3 text-[0.9rem] font-bold text-[#4a241d] shadow-[2px_2px_0_rgba(143,74,61,100)] transition active:translate-y-px"
+            >
+              <span style={{ fontWeight: 800 }}>
+                {exitAction === 'new-session' ? 'Tetap Buat Sesi Baru' : 'Tetap ke Home'}
+              </span>
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
