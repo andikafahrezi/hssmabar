@@ -4,6 +4,7 @@ import Setup from './pages/Setup'
 import Game from './pages/Game'
 import Leaderboard from './pages/Leaderboard'
 import Result from './pages/Result'
+import History from './pages/History'
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/game" element={<Game />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/result" element={<Result />} />
+        <Route path="/history" element={<History />} />
       </Routes>
     </BrowserRouter>
   )

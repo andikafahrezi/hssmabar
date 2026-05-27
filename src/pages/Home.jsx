@@ -1,4 +1,4 @@
-import { PlusCircle, SignIn } from '@phosphor-icons/react'
+import { ClockCounterClockwise, PlusCircle, SignIn } from '@phosphor-icons/react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import logo from '../assets/logohssmabar-vertical.svg'
@@ -8,7 +8,7 @@ function Home() {
   const navigate = useNavigate()
   const [joinCode, setJoinCode] = useState('')
   const [showJoin, setShowJoin] = useState(false)
-  const { resetAll } = useSessionStore()
+  const { history, resetAll } = useSessionStore()
 
   return (
     <div className="app-screen flex min-h-screen flex-col justify-between px-6 py-10">
@@ -34,14 +34,30 @@ function Home() {
           </button>
 
           {!showJoin ? (
-            <button
-              type="button"
-              onClick={() => setShowJoin(true)}
-              className="flex min-h-16 items-center justify-center gap-2 rounded-[18px] border-2 border-[#1f4b26] bg-white px-4 font-display text-[1.1rem] uppercase leading-none text-[#1f4b26] shadow-[2px_2px_0_rgba(31,75,38,0.92)] transition active:translate-y-px"
-            >
-              <SignIn size={18} weight="bold" />
-              Gabung Sesi
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => navigate('/history')}
+                className="flex min-h-16 items-center justify-center gap-2 rounded-[18px] border-2 border-[#1f4b26] bg-white px-4 font-display text-[1.1rem] uppercase leading-none text-[#1f4b26] shadow-[2px_2px_0_rgba(31,75,38,0.92)] transition active:translate-y-px"
+              >
+                <ClockCounterClockwise size={18} weight="bold" />
+                Riwayat Sesi
+                {history.length > 0 ? (
+                  <span className="ml-1 rounded-full bg-[#c6ff10] px-2 py-1 text-[0.68rem] leading-none text-[#1f2d13]">
+                    {history.length}
+                  </span>
+                ) : null}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowJoin(true)}
+                className="flex min-h-16 items-center justify-center gap-2 rounded-[18px] border-2 border-[#1f4b26] bg-white px-4 font-display text-[1.1rem] uppercase leading-none text-[#1f4b26] shadow-[2px_2px_0_rgba(31,75,38,0.92)] transition active:translate-y-px"
+              >
+                <SignIn size={18} weight="bold" />
+                Gabung Sesi
+              </button>
+            </>
           ) : (
             <div className="app-soft-card p-3">
               <label htmlFor="join-code" className="app-field-label !mb-2">Kode Sesi</label>
