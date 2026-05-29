@@ -9,6 +9,7 @@ const defaultSession = {
 }
 
 const HISTORY_KEY = 'shuttlemabar_history'
+const DELETED_ARCHIVE_KEY = 'shuttlemabar_deleted_archives'
 
 function loadFromStorage() {
   try {
@@ -37,6 +38,15 @@ function loadHistoryFromStorage() {
   }
 }
 
+function loadDeletedArchiveFingerprints() {
+  try {
+    const saved = localStorage.getItem(DELETED_ARCHIVE_KEY)
+    return saved ? JSON.parse(saved) : []
+  } catch {
+    return []
+  }
+}
+
 function hasSessionData(session) {
   return Boolean(
     session.sessionName ||
@@ -46,11 +56,24 @@ function hasSessionData(session) {
   )
 }
 
+function getArchiveFingerprint(session) {
+  return JSON.stringify({
+    sessionName: session.sessionName || '',
+    format: session.format || null,
+    targetScore: session.targetScore || 21,
+    createdAt: session.createdAt || null,
+    sessionFinished: Boolean(session.sessionFinished),
+    players: session.players || [],
+    matches: session.matches || [],
+  })
+}
+
 const useSessionStore = create((set, get) => ({
   // ── State ──
   ...loadFromStorage(),
   matches: loadMatchesFromStorage(),
   history: loadHistoryFromStorage(),
+  deletedArchiveFingerprints: loadDeletedArchiveFingerprints(),
   sessionStarted: !!localStorage.getItem('shuttlemabar_matches'),
   sessionFinished: localStorage.getItem('shuttlemabar_finished') === 'true',
 
@@ -127,27 +150,36 @@ const useSessionStore = create((set, get) => ({
       matches,
       sessionFinished,
       history,
+      deletedArchiveFingerprints,
     } = get()
+    const archivedAt = new Date().toISOString()
     const currentSession = {
       sessionName,
       format,
       players,
       targetScore,
-      createdAt,
+      createdAt: createdAt || archivedAt,
       matches,
+      sessionFinished,
     }
 
     if (!hasSessionData(currentSession)) return null
 
-    const archivedAt = new Date().toISOString()
+    const archiveFingerprint = getArchiveFingerprint(currentSession)
+    if (deletedArchiveFingerprints.includes(archiveFingerprint)) return null
+
     const archivedSession = {
-      id: `${createdAt || archivedAt}-${archivedAt}`,
+      id: `${currentSession.createdAt}-${archivedAt}`,
       ...currentSession,
-      createdAt: createdAt || archivedAt,
-      sessionFinished,
       archivedAt,
+      archiveFingerprint,
     }
-    const nextHistory = [archivedSession, ...history].slice(0, 20)
+    const nextHistory = [
+      archivedSession,
+      ...history.filter((session) => {
+        return (session.archiveFingerprint || getArchiveFingerprint(session)) !== archiveFingerprint
+      }),
+    ].slice(0, 20)
 
     set({ history: nextHistory })
     localStorage.setItem(HISTORY_KEY, JSON.stringify(nextHistory))
@@ -184,9 +216,17 @@ const useSessionStore = create((set, get) => ({
     }
   },
   deleteArchivedSession: (id) => {
+    const deletedSession = get().history.find((session) => session.id === id)
+    const deletedArchiveFingerprints = deletedSession
+      ? [
+          deletedSession.archiveFingerprint || getArchiveFingerprint(deletedSession),
+          ...get().deletedArchiveFingerprints,
+        ].slice(0, 100)
+      : get().deletedArchiveFingerprints
     const history = get().history.filter((session) => session.id !== id)
-    set({ history })
+    set({ history, deletedArchiveFingerprints })
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
+    localStorage.setItem(DELETED_ARCHIVE_KEY, JSON.stringify(deletedArchiveFingerprints))
   },
 
   // Reset semua — hanya saat kembali ke Home
