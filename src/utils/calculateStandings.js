@@ -3,19 +3,19 @@ function getPointDiff(player) {
 }
 
 function sortStandings(playerA, playerB) {
-  if (playerB.wins !== playerA.wins) return playerB.wins - playerA.wins
-
   if (playerB.pointsScored !== playerA.pointsScored) {
     return playerB.pointsScored - playerA.pointsScored
   }
 
+  if (playerA.matchesPlayed !== playerB.matchesPlayed) {
+    return playerA.matchesPlayed - playerB.matchesPlayed
+  }
+
+  if (playerB.wins !== playerA.wins) return playerB.wins - playerA.wins
+
   const diffA = getPointDiff(playerA)
   const diffB = getPointDiff(playerB)
   if (diffB !== diffA) return diffB - diffA
-
-  if (playerB.matchesPlayed !== playerA.matchesPlayed) {
-    return playerB.matchesPlayed - playerA.matchesPlayed
-  }
 
   return playerA.name.localeCompare(playerB.name)
 }

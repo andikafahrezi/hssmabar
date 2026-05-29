@@ -157,6 +157,77 @@ function activateFirstMatch(matches) {
   return matches
 }
 
+function getMatchPlayers(match) {
+  return [...match.teamA, ...match.teamB]
+}
+
+function reorderMatchesForRest(matches, players) {
+  if (matches.length <= 1) return matches
+
+  const pending = matches.map((match, index) => ({ match, index }))
+  const currentStreaks = new Map(players.map(player => [playerKey(player), 0]))
+  const scheduledPlays = new Map(players.map(player => [playerKey(player), 0]))
+  const courtCount = Math.max(1, ...matches.map(match => match.court || 1))
+  const ordered = []
+
+  while (pending.length > 0) {
+    let bestIndex = 0
+    let bestScore = Infinity
+
+    pending.forEach(({ match, index }, pendingIndex) => {
+      const playing = getMatchPlayers(match)
+      const playingIds = new Set(playing.map(playerKey))
+      const streakPressure = playing.reduce((total, player) => {
+        return total + (currentStreaks.get(playerKey(player)) || 0)
+      }, 0)
+      const maxProjectedStreak = Math.max(...playing.map(player => {
+        return (currentStreaks.get(playerKey(player)) || 0) + 1
+      }))
+      const playBalancePressure = playing.reduce((total, player) => {
+        return total + (scheduledPlays.get(playerKey(player)) || 0)
+      }, 0)
+      const restingRelief = players
+        .filter(player => !playingIds.has(playerKey(player)))
+        .reduce((total, player) => {
+          return total + (currentStreaks.get(playerKey(player)) || 0)
+        }, 0)
+      const score = (streakPressure * 1000) +
+        (maxProjectedStreak * 200) +
+        (playBalancePressure * 10) -
+        (restingRelief * 20) +
+        (index / 1000)
+
+      if (score < bestScore) {
+        bestScore = score
+        bestIndex = pendingIndex
+      }
+    })
+
+    const [{ match }] = pending.splice(bestIndex, 1)
+    const playingIds = new Set(getMatchPlayers(match).map(playerKey))
+
+    players.forEach(player => {
+      const key = playerKey(player)
+      if (playingIds.has(key)) {
+        currentStreaks.set(key, (currentStreaks.get(key) || 0) + 1)
+        scheduledPlays.set(key, (scheduledPlays.get(key) || 0) + 1)
+      } else {
+        currentStreaks.set(key, 0)
+      }
+    })
+
+    ordered.push(match)
+  }
+
+  return ordered.map((match, index) => ({
+    ...match,
+    id: index + 1,
+    round: index + 1,
+    court: (index % courtCount) + 1,
+    status: 'pending',
+  }))
+}
+
 function buildAmericanoMatches(players) {
   const playerStats = createPlayerStats(players)
   const opponentCounts = new Map()
@@ -273,7 +344,7 @@ function buildRoundRobinEntityMatches(entities, entityToPlayers, allPlayers) {
 export function generateAmericano(players) {
   if (players.length < 4) return []
 
-  return activateFirstMatch(buildAmericanoMatches(players))
+  return activateFirstMatch(reorderMatchesForRest(buildAmericanoMatches(players), players))
 }
 
 export function generateSingles(players) {
@@ -283,7 +354,7 @@ export function generateSingles(players) {
     players
   )
 
-  return activateFirstMatch(matches)
+  return activateFirstMatch(reorderMatchesForRest(matches, players))
 }
 
 export function generateMixed(players) {
@@ -302,7 +373,7 @@ export function generateMixed(players) {
     })
   })
 
-  return activateFirstMatch(scheduleMixedTeams(mixedTeams, players))
+  return activateFirstMatch(reorderMatchesForRest(scheduleMixedTeams(mixedTeams, players), players))
 }
 
 function scheduleMixedTeams(teams, players) {
@@ -377,7 +448,7 @@ export function generateFixedDoubles(players) {
     sittingOut: uniquePlayers([...(match.sittingOut || []), ...unmatchedPlayers]),
   }))
 
-  return activateFirstMatch(matches)
+  return activateFirstMatch(reorderMatchesForRest(matches, players))
 }
 
 export function generateMatches(format, players) {
