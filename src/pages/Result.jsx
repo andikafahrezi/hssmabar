@@ -212,7 +212,6 @@ function Result() {
     ctx.font = '700 26px "Plus Jakarta Sans"'
     const formatLabel = getFormatLabel(format).toUpperCase()
     ctx.fillText(`${formatLabel}  •  TARGET ${targetScore} POIN`, 540, titleY + 60)
-
     // 3. Header Tabel Klasemen
     const tableTop = 470
     const statsColX = {
