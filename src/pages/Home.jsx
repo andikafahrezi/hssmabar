@@ -21,6 +21,15 @@ function Home() {
         </div>
 
         <div className="flex flex-col gap-3 ">
+          <div className="rounded-[18px] border-[2px] border-[#d8a43a] bg-[#fff7df] px-4 py-3 text-left shadow-[2px_2px_0_rgba(31,75,38,0.92)]">
+            <p className="font-display text-[0.95rem] uppercase leading-none text-[#7a4d10]">
+              Under Maintenance & Redesign
+            </p>
+            <p className="mt-2 text-[0.8rem] leading-5 text-[#7a4d10]">
+              Aplikasi sedang dalam tahap perbaikan dan redesign. Kalau ingin dipakai, silakan lanjutkan, kami tetap menyediakannya untuk kebutuhan main bareng.
+            </p>
+          </div>
+
           <button
             type="button"
             onClick={() => {
