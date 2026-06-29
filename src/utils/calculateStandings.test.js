@@ -82,6 +82,45 @@ describe('calculateStandings', () => {
     expect(standings[3].id).toBe('p3')
   })
 
+  it('places 5W above 4W even if points are lower', () => {
+    const players = [
+      { id: 'nopal', name: 'Nopal' },
+      { id: 'andika', name: 'Andika' },
+      { id: 'alpil', name: 'Alpil' },
+      { id: 'ansor', name: 'Ansor' },
+      { id: 'maman', name: 'Maman' },
+      { id: 'silva', name: 'Silva' },
+      { id: 'fahrul', name: 'Fahrul' },
+      { id: 'fikih', name: 'Fikih' },
+    ]
+
+    const matches = [
+      { status: 'done', teamA: [players[0]], teamB: [players[1]], scoreA: 21, scoreB: 10 },
+      { status: 'done', teamA: [players[0]], teamB: [players[2]], scoreA: 21, scoreB: 10 },
+      { status: 'done', teamA: [players[0]], teamB: [players[3]], scoreA: 21, scoreB: 10 },
+      { status: 'done', teamA: [players[0]], teamB: [players[4]], scoreA: 21, scoreB: 10 },
+      { status: 'done', teamA: [players[0]], teamB: [players[5]], scoreA: 21, scoreB: 10 },
+      { status: 'done', teamA: [players[1]], teamB: [players[6]], scoreA: 21, scoreB: 10 },
+      { status: 'done', teamA: [players[1]], teamB: [players[7]], scoreA: 21, scoreB: 10 },
+      { status: 'done', teamA: [players[1]], teamB: [players[4]], scoreA: 21, scoreB: 10 },
+      { status: 'done', teamA: [players[1]], teamB: [players[5]], scoreA: 21, scoreB: 10 },
+      { status: 'done', teamA: [players[2]], teamB: [players[6]], scoreA: 21, scoreB: 10 },
+      { status: 'done', teamA: [players[2]], teamB: [players[7]], scoreA: 21, scoreB: 10 },
+      { status: 'done', teamA: [players[2]], teamB: [players[4]], scoreA: 21, scoreB: 10 },
+      { status: 'done', teamA: [players[2]], teamB: [players[5]], scoreA: 21, scoreB: 10 },
+      { status: 'done', teamA: [players[3]], teamB: [players[6]], scoreA: 21, scoreB: 10 },
+      { status: 'done', teamA: [players[3]], teamB: [players[7]], scoreA: 21, scoreB: 10 },
+      { status: 'done', teamA: [players[3]], teamB: [players[4]], scoreA: 21, scoreB: 10 },
+      { status: 'done', teamA: [players[3]], teamB: [players[5]], scoreA: 21, scoreB: 10 },
+    ]
+
+    const standings = calculateStandings(players, matches)
+
+    expect(standings[0].id).toBe('nopal')
+    expect(standings[1].wins).toBe(4)
+    expect(standings[0].wins).toBe(5)
+  })
+
   it('ignores matches that are not done', () => {
     const players = [
       { id: 'x', name: 'X' },
