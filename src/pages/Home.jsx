@@ -26,7 +26,7 @@ function Home() {
               Under Maintenance & Redesign
             </p>
             <p className="mt-2 text-[0.8rem] leading-5 text-[#7a4d10]">
-              Aplikasi sedang dalam tahap perbaikan dan redesign. Kalau ingin dipakai, silakan lanjutkan, kami tetap menyediakannya untuk kebutuhan main bareng.
+              Aplikasi sedang dalam tahap perbaikan dan redesign. Kalau ingin dipakai, silakan lanjutkan, tetap menyediakan untuk kebutuhan main bareng.
             </p>
           </div>
 
